@@ -25,11 +25,11 @@ double dist2UTM(double x1, double y1, double x2, double y2)
 	x = x * x;
 	y = (1 - y) * sinx[(int)yi] + y * sinx[((int)yi) + 1];
 	y = y * y;
-	yt = fabs(y1 + P.SpatialBoundingBox[1]);
+	yt = fabs(y1 + g_allParams.SpatialBoundingBox[1]);
 	yi = floor(yt);
 	cy1 = yt - yi;
 	cy1 = (1 - cy1) * cosx[((int)yi)] + cy1 * cosx[((int)yi) + 1];
-	yt = fabs(y2 + P.SpatialBoundingBox[1]);
+	yt = fabs(y2 + g_allParams.SpatialBoundingBox[1]);
 	yi = floor(yt);
 	cy2 = yt - yi;
 	cy2 = (1 - cy2) * cosx[((int)yi)] + cy2 * cosx[((int)yi) + 1];
@@ -43,16 +43,16 @@ double dist2(person* a, person* b)
 {
 	double x, y;
 
-	if (P.DoUTM_coords)
+	if (g_allParams.DoUTM_coords)
 		return dist2UTM(Households[a->hh].loc_x, Households[a->hh].loc_y, Households[b->hh].loc_x, Households[b->hh].loc_y);
 	else
 	{
 		x = fabs(Households[a->hh].loc_x - Households[b->hh].loc_x);
 		y = fabs(Households[a->hh].loc_y - Households[b->hh].loc_y);
-		if (P.DoPeriodicBoundaries)
+		if (g_allParams.DoPeriodicBoundaries)
 		{
-			if (x > P.width * 0.5) x = P.width - x;
-			if (y > P.height * 0.5) y = P.height - y;
+			if (x > g_allParams.width * 0.5) x = g_allParams.width - x;
+			if (y > g_allParams.height * 0.5) y = g_allParams.height - y;
 		}
 		return x * x + y * y;
 	}
@@ -64,17 +64,17 @@ double dist2_cc(cell* a, cell* b)
 
 	l = (int)(a - Cells);
 	m = (int)(b - Cells);
-	if (P.DoUTM_coords)
-		return dist2UTM(P.cwidth * fabs((double)(l / P.nch)), P.cheight * fabs((double)(l % P.nch)),
-			P.cwidth * fabs((double)(m / P.nch)), P.cheight * fabs((double)(m % P.nch)));
+	if (g_allParams.DoUTM_coords)
+		return dist2UTM(g_allParams.cwidth * fabs((double)(l / g_allParams.nch)), g_allParams.cheight * fabs((double)(l % g_allParams.nch)),
+			g_allParams.cwidth * fabs((double)(m / g_allParams.nch)), g_allParams.cheight * fabs((double)(m % g_allParams.nch)));
 	else
 	{
-		x = P.cwidth * fabs((double)(l / P.nch - m / P.nch));
-		y = P.cheight * fabs((double)(l % P.nch - m % P.nch));
-		if (P.DoPeriodicBoundaries)
+		x = g_allParams.cwidth * fabs((double)(l / g_allParams.nch - m / g_allParams.nch));
+		y = g_allParams.cheight * fabs((double)(l % g_allParams.nch - m % g_allParams.nch));
+		if (g_allParams.DoPeriodicBoundaries)
 		{
-			if (x > P.width * 0.5) x = P.width - x;
-			if (y > P.height * 0.5) y = P.height - y;
+			if (x > g_allParams.width * 0.5) x = g_allParams.width - x;
+			if (y > g_allParams.height * 0.5) y = g_allParams.height - y;
 		}
 		return x * x + y * y;
 	}
@@ -87,65 +87,65 @@ double dist2_cc_min(cell* a, cell* b)
 	l = (int)(a - Cells);
 	m = (int)(b - Cells);
 	i = l; j = m;
-	if (P.DoUTM_coords)
+	if (g_allParams.DoUTM_coords)
 	{
-		if (P.cwidth * ((double)abs(m / P.nch - l / P.nch)) > PI)
+		if (g_allParams.cwidth * ((double)abs(m / g_allParams.nch - l / g_allParams.nch)) > PI)
 		{
-			if (m / P.nch > l / P.nch)
-				j += P.nch;
-			else if (m / P.nch < l / P.nch)
-				i += P.nch;
+			if (m / g_allParams.nch > l / g_allParams.nch)
+				j += g_allParams.nch;
+			else if (m / g_allParams.nch < l / g_allParams.nch)
+				i += g_allParams.nch;
 		}
 		else
 		{
-			if (m / P.nch > l / P.nch)
-				i += P.nch;
-			else if (m / P.nch < l / P.nch)
-				j += P.nch;
+			if (m / g_allParams.nch > l / g_allParams.nch)
+				i += g_allParams.nch;
+			else if (m / g_allParams.nch < l / g_allParams.nch)
+				j += g_allParams.nch;
 		}
-		if (m % P.nch > l % P.nch)
+		if (m % g_allParams.nch > l % g_allParams.nch)
 			i++;
-		else if (m % P.nch < l % P.nch)
+		else if (m % g_allParams.nch < l % g_allParams.nch)
 			j++;
-		return dist2UTM(P.cwidth * fabs((double)(i / P.nch)), P.cheight * fabs((double)(i % P.nch)),
-			P.cwidth * fabs((double)(j / P.nch)), P.cheight * fabs((double)(j % P.nch)));
+		return dist2UTM(g_allParams.cwidth * fabs((double)(i / g_allParams.nch)), g_allParams.cheight * fabs((double)(i % g_allParams.nch)),
+			g_allParams.cwidth * fabs((double)(j / g_allParams.nch)), g_allParams.cheight * fabs((double)(j % g_allParams.nch)));
 	}
 	else
 	{
-		if ((P.DoPeriodicBoundaries) && (P.cwidth * ((double)abs(m / P.nch - l / P.nch)) > P.width * 0.5))
+		if ((g_allParams.DoPeriodicBoundaries) && (g_allParams.cwidth * ((double)abs(m / g_allParams.nch - l / g_allParams.nch)) > g_allParams.width * 0.5))
 		{
-			if (m / P.nch > l / P.nch)
-				j += P.nch;
-			else if (m / P.nch < l / P.nch)
-				i += P.nch;
+			if (m / g_allParams.nch > l / g_allParams.nch)
+				j += g_allParams.nch;
+			else if (m / g_allParams.nch < l / g_allParams.nch)
+				i += g_allParams.nch;
 		}
 		else
 		{
-			if (m / P.nch > l / P.nch)
-				i += P.nch;
-			else if (m / P.nch < l / P.nch)
-				j += P.nch;
+			if (m / g_allParams.nch > l / g_allParams.nch)
+				i += g_allParams.nch;
+			else if (m / g_allParams.nch < l / g_allParams.nch)
+				j += g_allParams.nch;
 		}
-		if ((P.DoPeriodicBoundaries) && (P.height * ((double)abs(m % P.nch - l % P.nch)) > P.height * 0.5))
+		if ((g_allParams.DoPeriodicBoundaries) && (g_allParams.height * ((double)abs(m % g_allParams.nch - l % g_allParams.nch)) > g_allParams.height * 0.5))
 		{
-			if (m % P.nch > l % P.nch)
+			if (m % g_allParams.nch > l % g_allParams.nch)
 				j++;
-			else if (m % P.nch < l % P.nch)
+			else if (m % g_allParams.nch < l % g_allParams.nch)
 				i++;
 		}
 		else
 		{
-			if (m % P.nch > l % P.nch)
+			if (m % g_allParams.nch > l % g_allParams.nch)
 				i++;
-			else if (m % P.nch < l % P.nch)
+			else if (m % g_allParams.nch < l % g_allParams.nch)
 				j++;
 		}
-		x = P.cwidth * fabs((double)(i / P.nch - j / P.nch));
-		y = P.cheight * fabs((double)(i % P.nch - j % P.nch));
-		if (P.DoPeriodicBoundaries)
+		x = g_allParams.cwidth * fabs((double)(i / g_allParams.nch - j / g_allParams.nch));
+		y = g_allParams.cheight * fabs((double)(i % g_allParams.nch - j % g_allParams.nch));
+		if (g_allParams.DoPeriodicBoundaries)
 		{
-			if (x > P.width * 0.5) x = P.width - x;
-			if (y > P.height * 0.5) y = P.height - y;
+			if (x > g_allParams.width * 0.5) x = g_allParams.width - x;
+			if (y > g_allParams.height * 0.5) y = g_allParams.height - y;
 		}
 		return x * x + y * y;
 	}
@@ -157,17 +157,17 @@ double dist2_mm(microcell* a, microcell* b)
 
 	l = (int)(a - Mcells);
 	m = (int)(b - Mcells);
-	if (P.DoUTM_coords)
-		return dist2UTM(P.mcwidth * fabs((double)(l / P.nmch)), P.mcheight * fabs((double)(l % P.nmch)),
-			P.mcwidth * fabs((double)(m / P.nmch)), P.mcheight * fabs((double)(m % P.nmch)));
+	if (g_allParams.DoUTM_coords)
+		return dist2UTM(g_allParams.mcwidth * fabs((double)(l / g_allParams.nmch)), g_allParams.mcheight * fabs((double)(l % g_allParams.nmch)),
+			g_allParams.mcwidth * fabs((double)(m / g_allParams.nmch)), g_allParams.mcheight * fabs((double)(m % g_allParams.nmch)));
 	else
 	{
-		x = P.mcwidth * fabs((double)(l / P.nmch - m / P.nmch));
-		y = P.mcheight * fabs((double)(l % P.nmch - m % P.nmch));
-		if (P.DoPeriodicBoundaries)
+		x = g_allParams.mcwidth * fabs((double)(l / g_allParams.nmch - m / g_allParams.nmch));
+		y = g_allParams.mcheight * fabs((double)(l % g_allParams.nmch - m % g_allParams.nmch));
+		if (g_allParams.DoPeriodicBoundaries)
 		{
-			if (x > P.width * 0.5) x = P.width - x;
-			if (y > P.height * 0.5) y = P.height - y;
+			if (x > g_allParams.width * 0.5) x = g_allParams.width - x;
+			if (y > g_allParams.height * 0.5) y = g_allParams.height - y;
 		}
 		return x * x + y * y;
 	}
@@ -177,16 +177,16 @@ double dist2_raw(double ax, double ay, double bx, double by)
 {
 	double x, y;
 
-	if (P.DoUTM_coords)
+	if (g_allParams.DoUTM_coords)
 		return dist2UTM(ax, ay, bx, by);
 	else
 	{
 		x = fabs(ax - bx);
 		y = fabs(ay - by);
-		if (P.DoPeriodicBoundaries)
+		if (g_allParams.DoPeriodicBoundaries)
 		{
-			if (x > P.width * 0.5) x = P.width - x;
-			if (y > P.height * 0.5) y = P.height - y;
+			if (x > g_allParams.width * 0.5) x = g_allParams.width - x;
+			if (y > g_allParams.height * 0.5) y = g_allParams.height - y;
 		}
 		return x * x + y * y;
 	}

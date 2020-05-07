@@ -27,7 +27,7 @@ static CLSID  encoderClsid;
 static unsigned char* bmf, *bmPixels, *bmp;
 // externs from CovidSim.cpp
 // TODO: move these to a header files
-extern char OutFile[1024], OutFileBase[1024];
+extern char OutFilePath[1024], OutFileBasePath[1024];
 
 void CaptureBitmap()
 {
@@ -37,17 +37,17 @@ void CaptureBitmap()
 	static int fst = 1;
 	double prev;
 
-	mi = (int)(P.bwidth * P.bheight);
+	mi = (int)(g_allParams.bwidth * g_allParams.bheight);
 	if (fst)
 	{
 		fst = 0;
 		int32_t maxPop = 0;
 		for (i = 0; i < mi; i++) bmPopulation[i] = 0;
-		for (i = 0; i < P.N; i++)
+		for (i = 0; i < g_allParams.populationSize; i++)
 		{
-			x = ((int)(Households[Hosts[i].hh].loc_x * P.scalex)) - P.bminx;
-			y = ((int)(Households[Hosts[i].hh].loc_y * P.scaley)) - P.bminy;
-			if ((x >= 0) && (x < P.bwidth) && (y >= 0) && (y < P.bheight))
+			x = ((int)(Households[Hosts[i].hh].loc_x * g_allParams.scalex)) - g_allParams.bminx;
+			y = ((int)(Households[Hosts[i].hh].loc_y * g_allParams.scaley)) - g_allParams.bminy;
+			if ((x >= 0) && (x < g_allParams.bwidth) && (y >= 0) && (y < g_allParams.bheight))
 			{
 				j = y * bmh->width + x;
 				if ((j < bmh->imagesize) && (j >= 0))
@@ -58,34 +58,34 @@ void CaptureBitmap()
 			}
 		}
 		logMaxPop = log(1.001 * (double)maxPop);
-		for (i = 0; i < P.NMC; i++)
+		for (i = 0; i < g_allParams.microcellCount; i++)
 			if (Mcells[i].n > 0)
 			{
 				f = 0;
-				if ((i < P.NMC - 1) && (i / P.nmch == (i + 1) / P.nmch) && (Mcells[i + 1].n > 0) && ((Mcells[i].country != Mcells[i + 1].country)
-					|| ((P.DoAdunitBoundaryOutput) && ((AdUnits[Mcells[i].adunit].id % P.AdunitLevel1Mask) / P.AdunitBitmapDivisor != (AdUnits[Mcells[i + 1].adunit].id % P.AdunitLevel1Mask) / P.AdunitBitmapDivisor)))) f = 1;
-				if ((i > 0) && (i / P.nmch == (i - 1) / P.nmch) && (Mcells[i - 1].n > 0) && (Mcells[i].country != Mcells[i - 1].country)) f = 1;
-				if ((i < P.NMC - P.nmch) && (Mcells[i + P.nmch].n > 0) && ((Mcells[i].country != Mcells[i + P.nmch].country)
-					|| ((P.DoAdunitBoundaryOutput) && ((AdUnits[Mcells[i].adunit].id % P.AdunitLevel1Mask) / P.AdunitBitmapDivisor != (AdUnits[Mcells[i + P.nmch].adunit].id % P.AdunitLevel1Mask) / P.AdunitBitmapDivisor)))) f = 1;
-				if ((i >= P.nmch) && (Mcells[i - P.nmch].n > 0) && (Mcells[i].country != Mcells[i - P.nmch].country)) f = 1;
+				if ((i < g_allParams.microcellCount - 1) && (i / g_allParams.nmch == (i + 1) / g_allParams.nmch) && (Mcells[i + 1].n > 0) && ((Mcells[i].country != Mcells[i + 1].country)
+					|| ((g_allParams.DoAdunitBoundaryOutput) && ((AdUnits[Mcells[i].adunit].id % g_allParams.AdunitLevel1Mask) / g_allParams.AdunitBitmapDivisor != (AdUnits[Mcells[i + 1].adunit].id % g_allParams.AdunitLevel1Mask) / g_allParams.AdunitBitmapDivisor)))) f = 1;
+				if ((i > 0) && (i / g_allParams.nmch == (i - 1) / g_allParams.nmch) && (Mcells[i - 1].n > 0) && (Mcells[i].country != Mcells[i - 1].country)) f = 1;
+				if ((i < g_allParams.microcellCount - g_allParams.nmch) && (Mcells[i + g_allParams.nmch].n > 0) && ((Mcells[i].country != Mcells[i + g_allParams.nmch].country)
+					|| ((g_allParams.DoAdunitBoundaryOutput) && ((AdUnits[Mcells[i].adunit].id % g_allParams.AdunitLevel1Mask) / g_allParams.AdunitBitmapDivisor != (AdUnits[Mcells[i + g_allParams.nmch].adunit].id % g_allParams.AdunitLevel1Mask) / g_allParams.AdunitBitmapDivisor)))) f = 1;
+				if ((i >= g_allParams.nmch) && (Mcells[i - g_allParams.nmch].n > 0) && (Mcells[i].country != Mcells[i - g_allParams.nmch].country)) f = 1;
 				if (f)
 				{
-					x = (int)(P.mcwidth * (((double)(i / P.nmch)) + 0.5) * P.scalex) - P.bminx;
-					y = (int)(P.mcheight * (((double)(i % P.nmch)) + 0.5) * P.scaley) - P.bminy;
-					if ((x >= 0) && (x < P.bwidth) && (y >= 0) && (y < P.bheight))
+					x = (int)(g_allParams.mcwidth * (((double)(i / g_allParams.nmch)) + 0.5) * g_allParams.scalex) - g_allParams.bminx;
+					y = (int)(g_allParams.mcheight * (((double)(i % g_allParams.nmch)) + 0.5) * g_allParams.scaley) - g_allParams.bminy;
+					if ((x >= 0) && (x < g_allParams.bwidth) && (y >= 0) && (y < g_allParams.bheight))
 					{
 						j = y * bmh->width + x;
 						if ((j < bmh->imagesize) && (j >= 0)) bmPopulation[j] = -1;
 					}
 				}
 			}
-		for (i = 0; i < P.bwidth / 2; i++)
+		for (i = 0; i < g_allParams.bwidth / 2; i++)
 		{
-			prev = floor(3.99999 * ((double)i) * BWCOLS / ((double)P.bwidth) * 2);
+			prev = floor(3.99999 * ((double)i) * BWCOLS / ((double)g_allParams.bwidth) * 2);
 			f = ((int)prev);
 			for (j = 0; j < 10; j++)
 			{
-				bmPixels[(j + P.bheight + 5) * bmh->width + P.bwidth / 4 + i] = f;
+				bmPixels[(j + g_allParams.bheight + 5) * bmh->width + g_allParams.bwidth / 4 + i] = f;
 			}
 		}
 	}
@@ -113,38 +113,38 @@ void OutputBitmap(int tp)
 	int j = 0;
 	static int cn1 = 0, cn2 = 0, cn3 = 0, cn4 = 0;
 
-	char *OutBaseName = strrchr(OutFile, '/');
-	char *OutBaseName2 = strrchr(OutFile, '\\');
+	char *OutBaseName = strrchr(OutFilePath, '/');
+	char *OutBaseName2 = strrchr(OutFilePath, '\\');
 	if (OutBaseName2 != nullptr && (OutBaseName == nullptr || OutBaseName2 > OutBaseName)) {
 		OutBaseName = OutBaseName2;
 	}
 	if (OutBaseName == nullptr) {
-		OutBaseName = OutFile;
+		OutBaseName = OutFilePath;
 	}
 
 	if (tp == 0)
 	{
 		j = cn1;
 		cn1++;
-		sprintf(OutF, "%s.ge" DIRECTORY_SEPARATOR "%s", OutFile, OutBaseName);
+		sprintf(OutF, "%s.ge" DIRECTORY_SEPARATOR "%s", OutFilePath, OutBaseName);
 	}
 	else if (tp == 1)
 	{
 		j = cn2;
 		cn2++;
-		sprintf(OutF, "%s.ge" DIRECTORY_SEPARATOR "Mean.%s", OutFile, OutBaseName);
+		sprintf(OutF, "%s.ge" DIRECTORY_SEPARATOR "Mean.%s", OutFilePath, OutBaseName);
 	}
 	else if (tp == 2)
 	{
 		j = cn3;
 		cn3++;
-		sprintf(OutF, "%s.ge" DIRECTORY_SEPARATOR "Min.%s", OutFile, OutBaseName);
+		sprintf(OutF, "%s.ge" DIRECTORY_SEPARATOR "Min.%s", OutFilePath, OutBaseName);
 	}
 	else if (tp == 3)
 	{
 		j = cn4;
 		cn4++;
-		sprintf(OutF, "%s.ge" DIRECTORY_SEPARATOR "Max.%s", OutFile, OutBaseName);
+		sprintf(OutF, "%s.ge" DIRECTORY_SEPARATOR "Max.%s", OutFilePath, OutBaseName);
 	}
 
 #ifdef IMAGE_MAGICK
@@ -213,7 +213,7 @@ void InitBMHead()
 	int i, j, k, k2, value;
 
 	fprintf(stderr, "Initialising bitmap\n");
-	k = P.bwidth * P.bheight2;
+	k = g_allParams.bwidth * g_allParams.bheight2;
 	k2 = sizeof(bitmap_header) / sizeof(unsigned char);
 
 	if (!(bmf = (unsigned char*)calloc((size_t)k + k2, sizeof(unsigned char))))
@@ -224,8 +224,8 @@ void InitBMHead()
 	bmh->spare = 0;
 	bmh->boffset = 2 + sizeof(bitmap_header);
 	bmh->headersize = 40; // BITMAPINFOHEADER
-	bmh->width = P.bwidth;
-	bmh->height = P.bheight2;
+	bmh->width = g_allParams.bwidth;
+	bmh->height = g_allParams.bheight2;
 	bmh->PlanesAndBitspp = 1 // Number of colour planes; must be 1
 	                     + (8 << 16); // Colour depth: 8 bits per pixel
 	bmh->compr = 0; // No compression (BI_RGB)
@@ -294,7 +294,7 @@ void InitBMHead()
 #endif
 
 	char buf[1024+3];
-	sprintf(buf, "%s.ge", OutFileBase);
+	sprintf(buf, "%s.ge", OutFileBasePath);
 #ifdef _WIN32
 	if (!(CreateDirectory(buf, NULL))) fprintf(stderr, "Unable to create directory %s\n", buf);
 #else

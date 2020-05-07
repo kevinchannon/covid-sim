@@ -22,22 +22,22 @@ void TravelReturnSweep(double t)
 	int i, j, k, l, n, nr, ner, tn;
 
 	// Convince static analysers that values are set correctly:
-	if (!(P.DoAirports && P.HotelPlaceType < P.PlaceTypeNum)) ERR_CRITICAL("DoAirports || HotelPlaceType not set\n");
+	if (!(g_allParams.DoAirports && g_allParams.HotelPlaceType < g_allParams.PlaceTypeNum)) ERR_CRITICAL("DoAirports || HotelPlaceType not set\n");
 
-	if (floor(1 + t + P.TimeStep) != floor(1 + t))
+	if (floor(1 + t + g_allParams.TimeStep) != floor(1 + t))
 	{
 		nr = ner = 0;
 		k = (int)floor(t);
 		l = 1 + k % MAX_TRAVEL_TIME;
 #pragma omp parallel for private(i,j,k,n,tn) reduction(+:nr,ner) schedule(static,1)
-		for (tn = 0; tn < P.NumThreads; tn++)
+		for (tn = 0; tn < g_allParams.NumThreads; tn++)
 		{
-			for (j = tn; j < P.Nplace[P.HotelPlaceType]; j += P.NumThreads)
+			for (j = tn; j < g_allParams.Nplace[g_allParams.HotelPlaceType]; j += g_allParams.NumThreads)
 			{
-				n = Places[P.HotelPlaceType][j].n;
+				n = Places[g_allParams.HotelPlaceType][j].n;
 				for (k = n - 1; k >= 0; k--)
 				{
-					i = Places[P.HotelPlaceType][j].members[k];
+					i = Places[g_allParams.HotelPlaceType][j].members[k];
 					if (Hosts[i].Travelling == l)
 					{
 						n--;
@@ -49,18 +49,18 @@ void TravelReturnSweep(double t)
 						*/
 						if (k != n)
 						{
-							Places[P.HotelPlaceType][j].members[k] = Places[P.HotelPlaceType][j].members[n];
+							Places[g_allParams.HotelPlaceType][j].members[k] = Places[g_allParams.HotelPlaceType][j].members[n];
 						}
 						nr++;
-						if (Hosts[i].PlaceLinks[P.HotelPlaceType] != j)
+						if (Hosts[i].PlaceLinks[g_allParams.HotelPlaceType] != j)
 						{
-							ner++; fprintf(stderr, "(%i %i) ", j, Hosts[i].PlaceLinks[P.HotelPlaceType]);
+							ner++; fprintf(stderr, "(%i %i) ", j, Hosts[i].PlaceLinks[g_allParams.HotelPlaceType]);
 						}
-						Hosts[i].PlaceLinks[P.HotelPlaceType] = -1;
+						Hosts[i].PlaceLinks[g_allParams.HotelPlaceType] = -1;
 						Hosts[i].Travelling = 0;
 					}
 				}
-				Places[P.HotelPlaceType][j].n = n;
+				Places[g_allParams.HotelPlaceType][j].n = n;
 			}
 		}
 		fprintf(stderr, " d=%i e=%i>", nr, ner);
@@ -74,23 +74,23 @@ void TravelDepartSweep(double t)
 	cell* ct;
 
 	// Convince static analysers that values are set correctly:
-	if (!(P.DoAirports && P.HotelPlaceType < P.PlaceTypeNum)) ERR_CRITICAL("DoAirports || HotelPlaceType not set\n");
+	if (!(g_allParams.DoAirports && g_allParams.HotelPlaceType < g_allParams.PlaceTypeNum)) ERR_CRITICAL("DoAirports || HotelPlaceType not set\n");
 
-	if (floor(1 + t - P.TimeStep) != floor(1 + t))
+	if (floor(1 + t - g_allParams.TimeStep) != floor(1 + t))
 	{
-		bm = ((P.DoBlanketMoveRestr) && (t >= P.MoveRestrTimeStart) && (t < P.MoveRestrTimeStart + P.MoveRestrDuration));
-		mps = 2 * ((int)P.PlaceTypeMeanSize[P.HotelPlaceType]) - P.NumThreads - 1;
+		bm = ((g_allParams.DoBlanketMoveRestr) && (t >= g_allParams.MoveRestrTimeStart) && (t < g_allParams.MoveRestrTimeStart + g_allParams.MoveRestrDuration));
+		mps = 2 * ((int)g_allParams.PlaceTypeMeanSize[g_allParams.HotelPlaceType]) - g_allParams.NumThreads - 1;
 		k = (int)floor(t);
 		d = k % MAX_TRAVEL_TIME;
 		nad = nld = nsk = 0;
 #pragma omp parallel for private(i,i2,j,k,l,d2,m,n,s,f,f2,f3,tn,hp) reduction(+:nad,nsk) schedule(static,1)
-		for (tn = 0; tn < P.NumThreads; tn++)
-			for (i = tn; i < P.Nairports; i += P.NumThreads)
+		for (tn = 0; tn < g_allParams.NumThreads; tn++)
+			for (i = tn; i < g_allParams.Nairports; i += g_allParams.NumThreads)
 				if ((Airports[i].total_traffic > 0) && (Airports[i].num_mcell > 0))
 				{
 					s = Airports[i].total_traffic;
-					if ((t > P.AirportCloseTimeStart) && (t < P.AirportCloseTimeStart + P.AirportCloseTimeStartBase))
-						s *= P.AirportCloseEffectiveness;
+					if ((t > g_allParams.AirportCloseTimeStart) && (t < g_allParams.AirportCloseTimeStart + g_allParams.AirportCloseTimeStartBase))
+						s *= g_allParams.AirportCloseEffectiveness;
 					n = (s > 0) ? ((int)ignpoi_mt((double)s, tn)) : 0;
 					f3 = 0;
 					j = 0;
@@ -105,14 +105,14 @@ void TravelDepartSweep(double t)
 						if ((abs(Hosts[i2].inf) < InfStat_InfectiousAsymptomaticNotCase) && (Hosts[i2].inf != InfStat_Case))
 						{
 							d2 = HOST_AGE_GROUP(i2);
-							if ((P.RelativeTravelRate[d2] == 1) || (ranf_mt(tn) < P.RelativeTravelRate[d2]))
+							if ((g_allParams.RelativeTravelRate[d2] == 1) || (ranf_mt(tn) < g_allParams.RelativeTravelRate[d2]))
 							{
 								f2 = 1;
 #pragma omp critical
 								{
-									if (Hosts[i2].PlaceLinks[P.HotelPlaceType] == -1)
+									if (Hosts[i2].PlaceLinks[g_allParams.HotelPlaceType] == -1)
 									{
-										Hosts[i2].PlaceLinks[P.HotelPlaceType] = -2;
+										Hosts[i2].PlaceLinks[g_allParams.HotelPlaceType] = -2;
 										f2 = 0;
 									}
 								}
@@ -124,15 +124,15 @@ void TravelDepartSweep(double t)
 									k = Airports[i].conn_airports[l];
 									if (bm)
 									{
-										if (dist2_raw(Airports[i].loc_x, Airports[i].loc_y, Airports[k].loc_x, Airports[k].loc_y) > P.MoveRestrRadius2)
+										if (dist2_raw(Airports[i].loc_x, Airports[i].loc_y, Airports[k].loc_x, Airports[k].loc_y) > g_allParams.MoveRestrRadius2)
 										{
-											if (ranf_mt(tn) > P.MoveRestrEffect)
+											if (ranf_mt(tn) > g_allParams.MoveRestrEffect)
 											{
 												f2 = 1;
 												nsk++;
 												j++;
 #pragma omp critical
-												Hosts[i2].PlaceLinks[P.HotelPlaceType] = -1;
+												Hosts[i2].PlaceLinks[g_allParams.HotelPlaceType] = -1;
 											}
 										}
 									}
@@ -147,18 +147,18 @@ void TravelDepartSweep(double t)
 											l = Airports[k].DestPlaces[m].id;
 #pragma omp critical
 											{
-												if ((hp = Places[P.HotelPlaceType][l].n) < mps)
+												if ((hp = Places[g_allParams.HotelPlaceType][l].n) < mps)
 												{
 													f = 0;
-													Places[P.HotelPlaceType][l].n++;
+													Places[g_allParams.HotelPlaceType][l].n++;
 												}
 											}
 											if (!f)
 											{
 												f3 = 0;
-												Places[P.HotelPlaceType][l].members[hp] = i2;
-												d2 = (d + P.InvJourneyDurationDistrib[(int)(ranf_mt(tn) * 1024.0)]) % MAX_TRAVEL_TIME;
-												Hosts[i2].PlaceLinks[P.HotelPlaceType] = l;
+												Places[g_allParams.HotelPlaceType][l].members[hp] = i2;
+												d2 = (d + g_allParams.InvJourneyDurationDistrib[(int)(ranf_mt(tn) * 1024.0)]) % MAX_TRAVEL_TIME;
+												Hosts[i2].PlaceLinks[g_allParams.HotelPlaceType] = l;
 												Hosts[i2].Travelling = 1 + d2;
 												nad++;
 												j++;
@@ -168,7 +168,7 @@ void TravelDepartSweep(double t)
 										if (f)
 										{
 #pragma omp critical
-											Hosts[i2].PlaceLinks[P.HotelPlaceType] = -1;
+											Hosts[i2].PlaceLinks[g_allParams.HotelPlaceType] = -1;
 											if (++f3 > 100)
 											{
 												j++; nsk++;
@@ -183,18 +183,18 @@ void TravelDepartSweep(double t)
 					}
 				}
 		fprintf(stderr, "<ar=%i as=%i", nad, nsk);
-		nl = ((double)P.PlaceTypeMeanSize[P.HotelPlaceType]) * P.HotelPropLocal / P.MeanLocalJourneyTime;
+		nl = ((double)g_allParams.PlaceTypeMeanSize[g_allParams.HotelPlaceType]) * g_allParams.HotelPropLocal / g_allParams.MeanLocalJourneyTime;
 		nsk = 0;
 #pragma omp parallel for private(c,i,i2,j,l,d2,m,n,s,s2,ct,f,f2,f3,tn,hp) reduction(+:nld,nsk) schedule(static,1)
-		for (tn = 0; tn < P.NumThreads; tn++)
-			for (i = tn; i < P.Nplace[P.HotelPlaceType]; i += P.NumThreads)
+		for (tn = 0; tn < g_allParams.NumThreads; tn++)
+			for (i = tn; i < g_allParams.Nplace[g_allParams.HotelPlaceType]; i += g_allParams.NumThreads)
 			{
-				c = ((int)(Places[P.HotelPlaceType][i].loc_x / P.cwidth)) * P.nch + ((int)(Places[P.HotelPlaceType][i].loc_y / P.cheight));
+				c = ((int)(Places[g_allParams.HotelPlaceType][i].loc_x / g_allParams.cwidth)) * g_allParams.nch + ((int)(Places[g_allParams.HotelPlaceType][i].loc_y / g_allParams.cheight));
 				n = (int)ignpoi_mt(nl * Cells[c].tot_prob, tn);
-				if (Places[P.HotelPlaceType][i].n + n > mps)
+				if (Places[g_allParams.HotelPlaceType][i].n + n > mps)
 				{
-					nsk += (Places[P.HotelPlaceType][i].n + n - mps);
-					n = mps - Places[P.HotelPlaceType][i].n;
+					nsk += (Places[g_allParams.HotelPlaceType][i].n + n - mps);
+					n = mps - Places[g_allParams.HotelPlaceType][i].n;
 				}
 				for (j = 0; j < n; j++)
 				{
@@ -211,21 +211,21 @@ void TravelDepartSweep(double t)
 							i2 = ct->susceptible[m];
 							d2 = HOST_AGE_GROUP(i2);
 							f3 = 0;
-							if ((Hosts[i2].Travelling == 0) && ((P.RelativeTravelRate[d2] == 1) || (ranf_mt(tn) < P.RelativeTravelRate[d2])))
+							if ((Hosts[i2].Travelling == 0) && ((g_allParams.RelativeTravelRate[d2] == 1) || (ranf_mt(tn) < g_allParams.RelativeTravelRate[d2])))
 							{
 #pragma omp critical
-								{if (Hosts[i2].PlaceLinks[P.HotelPlaceType] == -1) { Hosts[i2].PlaceLinks[P.HotelPlaceType] = -2; f3 = 1; }}
+								{if (Hosts[i2].PlaceLinks[g_allParams.HotelPlaceType] == -1) { Hosts[i2].PlaceLinks[g_allParams.HotelPlaceType] = -2; f3 = 1; }}
 							}
 							if (f3)
 							{
-								s2 = dist2_raw(Households[Hosts[i2].hh].loc_x, Households[Hosts[i2].hh].loc_y, Places[P.HotelPlaceType][i].loc_x, Places[P.HotelPlaceType][i].loc_y);
+								s2 = dist2_raw(Households[Hosts[i2].hh].loc_x, Households[Hosts[i2].hh].loc_y, Places[g_allParams.HotelPlaceType][i].loc_x, Places[g_allParams.HotelPlaceType][i].loc_y);
 								f2 = 1;
-								if ((bm) && (s2 > P.MoveRestrRadius2))
+								if ((bm) && (s2 > g_allParams.MoveRestrRadius2))
 								{
-									if (ranf_mt(tn) >= P.MoveRestrEffect)
+									if (ranf_mt(tn) >= g_allParams.MoveRestrEffect)
 									{
 #pragma omp critical
-										Hosts[i2].PlaceLinks[P.HotelPlaceType] = -1;
+										Hosts[i2].PlaceLinks[g_allParams.HotelPlaceType] = -1;
 										nsk++;
 										f2 = 0;
 									}
@@ -236,19 +236,19 @@ void TravelDepartSweep(double t)
 									if (ranf_mt(tn) >= s)
 									{
 #pragma omp critical
-										Hosts[i2].PlaceLinks[P.HotelPlaceType] = -1;
+										Hosts[i2].PlaceLinks[g_allParams.HotelPlaceType] = -1;
 										f = 1;
 									}
 									else
 									{
-										d2 = (d + P.InvLocalJourneyDurationDistrib[(int)(ranf_mt(tn) * 1024.0)]) % MAX_TRAVEL_TIME;
-										hp = Places[P.HotelPlaceType][i].n;
-										Places[P.HotelPlaceType][i].n++;
-										Places[P.HotelPlaceType][i].members[hp] = i2;
+										d2 = (d + g_allParams.InvLocalJourneyDurationDistrib[(int)(ranf_mt(tn) * 1024.0)]) % MAX_TRAVEL_TIME;
+										hp = Places[g_allParams.HotelPlaceType][i].n;
+										Places[g_allParams.HotelPlaceType][i].n++;
+										Places[g_allParams.HotelPlaceType][i].members[hp] = i2;
 										Hosts[i2].Travelling = 1 + d2;
 										nld++;
 #pragma omp critical
-										Hosts[i2].PlaceLinks[P.HotelPlaceType] = i;
+										Hosts[i2].PlaceLinks[g_allParams.HotelPlaceType] = i;
 									}
 								}
 							}
@@ -291,18 +291,18 @@ void InfectSweep(double t, int run) //added run number as argument in order to r
 	unsigned short int ts;
 	person* si;
 
-	if (!P.DoSeasonality)	seasonality = 1.0;
-	else					seasonality = P.Seasonality[((int)t) % DAYS_PER_YEAR];
+	if (!g_allParams.DoSeasonality)	seasonality = 1.0;
+	else					seasonality = g_allParams.Seasonality[((int)t) % DAYS_PER_YEAR];
 
-	ts = (unsigned short int) (P.TimeStepsPerDay * t);
-	fp = P.TimeStep / (1 - P.FalsePositiveRate);
-	sbeta = seasonality * fp * P.LocalBeta;
-	hbeta = (P.DoHouseholds) ? (seasonality * fp * P.HouseholdTrans) : 0;
-	bm = ((P.DoBlanketMoveRestr) && (t >= P.MoveRestrTimeStart) && (t < P.MoveRestrTimeStart + P.MoveRestrDuration));
+	ts = (unsigned short int) (g_allParams.TimeStepsPerDay * t);
+	fp = g_allParams.TimeStep / (1 - g_allParams.FalsePositiveRate);
+	sbeta = seasonality * fp * g_allParams.LocalBeta;
+	hbeta = (g_allParams.DoHouseholds) ? (seasonality * fp * g_allParams.HouseholdTrans) : 0;
+	bm = ((g_allParams.DoBlanketMoveRestr) && (t >= g_allParams.MoveRestrTimeStart) && (t < g_allParams.MoveRestrTimeStart + g_allParams.MoveRestrDuration));
 
 #pragma omp parallel for private(j,k,l,m,n,i2,b,i3,f,f2,fct,s,s2,s3,s4,s5,s6,c,ct,mi,mt,mp,cq,ci,si,ad,s3_scaled,s4_scaled) schedule(static,1)
-	for (tn = 0; tn < P.NumThreads; tn++)
-		for (b = tn; b < P.NCP; b += P.NumThreads) //// loop over (in parallel) all populated cells. Loop 1)
+	for (tn = 0; tn < g_allParams.NumThreads; tn++)
+		for (b = tn; b < g_allParams.populatedCellCount; b += g_allParams.NumThreads) //// loop over (in parallel) all populated cells. Loop 1)
 		{
 			c = CellLookup[b];
 			s5 = 0; ///// spatial infectiousness summed over all infectious people in loop below
@@ -314,8 +314,8 @@ void InfectSweep(double t, int run) //added run number as argument in order to r
 				si = Hosts + ci;
 
 				//calculate flag for digital contact tracing here at the beginning for each individual
-				fct = ((P.DoDigitalContactTracing) && (t >= AdUnits[Mcells[si->mcell].adunit].DigitalContactTracingTimeStart)
-				&& (t < AdUnits[Mcells[si->mcell].adunit].DigitalContactTracingTimeStart + P.DigitalContactTracingPolicyDuration) && (Hosts[ci].digitalContactTracingUser == 1)); // && (ts <= (Hosts[ci].detected_time + P.usCaseIsolationDelay)));
+				fct = ((g_allParams.DoDigitalContactTracing) && (t >= AdUnits[Mcells[si->mcell].adunit].DigitalContactTracingTimeStart)
+				&& (t < AdUnits[Mcells[si->mcell].adunit].DigitalContactTracingTimeStart + g_allParams.DigitalContactTracingPolicyDuration) && (Hosts[ci].digitalContactTracingUser == 1)); // && (ts <= (Hosts[ci].detected_time + P.usCaseIsolationDelay)));
 
 				//// Household FOI component
 				if (hbeta > 0)
@@ -328,17 +328,17 @@ void InfectSweep(double t, int run) //added run number as argument in order to r
 						f = 0;
 						for (i3 = l; (i3 < m) && (!f); i3++) //// loop over people in household
 							f = HOST_ABSENT(i3);
-						if (f) { s3 *= P.PlaceCloseHouseholdRelContact; }/* NumPCD++;}*/ //// if people in your household are absent from places, person si/ci is more infectious to them, as they spend more time at home.
+						if (f) { s3 *= g_allParams.PlaceCloseHouseholdRelContact; }/* NumPCD++;}*/ //// if people in your household are absent from places, person si/ci is more infectious to them, as they spend more time at home.
 						for (i3 = l; i3 < m; i3++) //// loop over all people in household (note goes from l to m - 1)
 							if ((Hosts[i3].inf == InfStat_Susceptible) && (!Hosts[i3].Travelling)) //// if people in household uninfected/susceptible and not travelling
 							{
 								s = s3 * CalcHouseSusc(i3, ts, ci, tn);		//// FOI ( = infectiousness x susceptibility) from person ci/si on fellow household member i3
 								if (ranf_mt(tn) < s) //// if household member i3 will be infected...
 								{
-									cq = Hosts[i3].pcell % P.NumThreads;
-									if ((StateT[tn].n_queue[cq] < P.InfQueuePeakLength)) //(Hosts[i3].infector==-1)&&
+									cq = Hosts[i3].pcell % g_allParams.NumThreads;
+									if ((StateT[tn].n_queue[cq] < g_allParams.InfQueuePeakLength)) //(Hosts[i3].infector==-1)&&
 									{
-										if ((P.FalsePositiveRate > 0) && (ranf_mt(tn) < P.FalsePositiveRate))
+										if ((g_allParams.FalsePositiveRate > 0) && (ranf_mt(tn) < g_allParams.FalsePositiveRate))
 											StateT[tn].inf_queue[cq][StateT[tn].n_queue[cq]++] = {-1, i3, -1};
 										else
 										{
@@ -352,12 +352,12 @@ void InfectSweep(double t, int run) //added run number as argument in order to r
 					}
 				}
 				//// Place FOI component
-				if (P.DoPlaces)
+				if (g_allParams.DoPlaces)
 				{
 					if (!HOST_ABSENT(ci))
 					{
 						mi = Mcells + si->mcell;
-						for (k = 0; k < P.PlaceTypeNum; k++) //// loop over all place types
+						for (k = 0; k < g_allParams.PlaceTypeNum; k++) //// loop over all place types
 						{
 							l = si->PlaceLinks[k];
 							if (l >= 0)  //// l>=0 means if place type k is relevant to person si. (Now allowing for partial attendance).
@@ -367,21 +367,21 @@ void InfectSweep(double t, int run) //added run number as argument in order to r
 								if (bm)
 								{
 									if ((dist2_raw(Households[si->hh].loc_x, Households[si->hh].loc_y,
-										Places[k][l].loc_x, Places[k][l].loc_y) > P.MoveRestrRadius2))
-										s3 *= P.MoveRestrEffect;
+										Places[k][l].loc_x, Places[k][l].loc_y) > g_allParams.MoveRestrRadius2))
+										s3 *= g_allParams.MoveRestrEffect;
 								}
 								else if ((mi->moverest != mp->moverest) && ((mi->moverest == 2) || (mp->moverest == 2)))
 								{
-									s3 *= P.MoveRestrEffect;
+									s3 *= g_allParams.MoveRestrEffect;
 								}
 
-								if ((k != P.HotelPlaceType) && (!si->Travelling))
+								if ((k != g_allParams.HotelPlaceType) && (!si->Travelling))
 								{
 									i2 = (si->PlaceGroupLinks[k]);
 									if (fct)
 									{
 										s4 = s3;
-										s4_scaled = s4 *P.ScalingFactorPlaceDigitalContacts;
+										s4_scaled = s4 *g_allParams.ScalingFactorPlaceDigitalContacts;
 										if (s4 > 1) s4 = 1;
 										if (s4_scaled > 1) s4_scaled = 1;
 									}
@@ -410,8 +410,8 @@ void InfectSweep(double t, int run) //added run number as argument in order to r
 										//if infectee is also a user, add them as a contact
 										if ((fct) && (Hosts[i3].digitalContactTracingUser) && (ci != i3) && (!HOST_ABSENT(i3)))
 										{
-											s6 = P.ProportionDigitalContactsIsolate * s;
-											if ((Hosts[ci].ncontacts < P.MaxDigitalContactsToTrace) && (ranf_mt(tn) <s6))
+											s6 = g_allParams.ProportionDigitalContactsIsolate * s;
+											if ((Hosts[ci].ncontacts < g_allParams.MaxDigitalContactsToTrace) && (ranf_mt(tn) <s6))
 											{
 												Hosts[ci].ncontacts++; //add to number of contacts made
 												ad = Mcells[Hosts[i3].mcell].adunit;
@@ -437,18 +437,18 @@ void InfectSweep(double t, int run) //added run number as argument in order to r
 											if (bm)
 											{
 												if ((dist2_raw(Households[Hosts[i3].hh].loc_x, Households[Hosts[i3].hh].loc_y,
-													Places[k][l].loc_x, Places[k][l].loc_y) > P.MoveRestrRadius2))
-													s *= P.MoveRestrEffect;
+													Places[k][l].loc_x, Places[k][l].loc_y) > g_allParams.MoveRestrRadius2))
+													s *= g_allParams.MoveRestrEffect;
 											}
 											else if ((mt->moverest != mp->moverest) && ((mt->moverest == 2) || (mp->moverest == 2)))
-												s *= P.MoveRestrEffect;
+												s *= g_allParams.MoveRestrEffect;
 
 											if ((s == 1) || (ranf_mt(tn) < s))
 											{
-												cq = Hosts[i3].pcell % P.NumThreads;
-												if ((StateT[tn].n_queue[cq] < P.InfQueuePeakLength)) //(Hosts[i3].infector==-1)&&
+												cq = Hosts[i3].pcell % g_allParams.NumThreads;
+												if ((StateT[tn].n_queue[cq] < g_allParams.InfQueuePeakLength)) //(Hosts[i3].infector==-1)&&
 												{
-													if ((P.FalsePositiveRate > 0) && (ranf_mt(tn) < P.FalsePositiveRate))
+													if ((g_allParams.FalsePositiveRate > 0) && (ranf_mt(tn) < g_allParams.FalsePositiveRate))
 														StateT[tn].inf_queue[cq][StateT[tn].n_queue[cq]++] = {-1, i3, -1};
 													else
 													{
@@ -460,11 +460,11 @@ void InfectSweep(double t, int run) //added run number as argument in order to r
 										}
 									}
 								}
-								if ((k == P.HotelPlaceType) || (!si->Travelling))
+								if ((k == g_allParams.HotelPlaceType) || (!si->Travelling))
 								{
-									s3 *= P.PlaceTypePropBetweenGroupLinks[k] * P.PlaceTypeGroupSizeParam1[k] / ((double)Places[k][l].n);
+									s3 *= g_allParams.PlaceTypePropBetweenGroupLinks[k] * g_allParams.PlaceTypeGroupSizeParam1[k] / ((double)Places[k][l].n);
 									if (s3 > 1) s3 = 1;
-									s3_scaled = (fct) ? (s3 * P.ScalingFactorPlaceDigitalContacts) : s3;
+									s3_scaled = (fct) ? (s3 * g_allParams.ScalingFactorPlaceDigitalContacts) : s3;
 									if (s3_scaled < 0)
 									{
 										ERR_CRITICAL_FMT("@@@ %lg\n", s3);
@@ -482,8 +482,8 @@ void InfectSweep(double t, int run) //added run number as argument in order to r
 										//if infectee is also a user, add them as a contact
 										if ((fct) && (Hosts[i3].digitalContactTracingUser) && (ci != i3) && (!HOST_ABSENT(i3)))
 										{
-											s6 = P.ProportionDigitalContactsIsolate * s;
-											if ((Hosts[ci].ncontacts < P.MaxDigitalContactsToTrace) && (ranf_mt(tn) < s6))
+											s6 = g_allParams.ProportionDigitalContactsIsolate * s;
+											if ((Hosts[ci].ncontacts < g_allParams.MaxDigitalContactsToTrace) && (ranf_mt(tn) < s6))
 											{
 												Hosts[ci].ncontacts++; //add to number of contacts made
 												ad = Mcells[Hosts[i3].mcell].adunit;
@@ -508,17 +508,17 @@ void InfectSweep(double t, int run) //added run number as argument in order to r
 											if (bm)
 											{
 												if ((dist2_raw(Households[Hosts[i3].hh].loc_x, Households[Hosts[i3].hh].loc_y,
-													Places[k][l].loc_x, Places[k][l].loc_y) > P.MoveRestrRadius2))
-													s *= P.MoveRestrEffect;
+													Places[k][l].loc_x, Places[k][l].loc_y) > g_allParams.MoveRestrRadius2))
+													s *= g_allParams.MoveRestrEffect;
 											}
 											else if ((mt->moverest != mp->moverest) && ((mt->moverest == 2) || (mp->moverest == 2)))
-												s *= P.MoveRestrEffect;
+												s *= g_allParams.MoveRestrEffect;
 											if ((s == 1) || (ranf_mt(tn) < s))
 											{
-												cq = Hosts[i3].pcell % P.NumThreads;
-												if ((StateT[tn].n_queue[cq] < P.InfQueuePeakLength))//(Hosts[i3].infector==-1)&&
+												cq = Hosts[i3].pcell % g_allParams.NumThreads;
+												if ((StateT[tn].n_queue[cq] < g_allParams.InfQueuePeakLength))//(Hosts[i3].infector==-1)&&
 												{
-													if ((P.FalsePositiveRate > 0) && (ranf_mt(tn) < P.FalsePositiveRate))
+													if ((g_allParams.FalsePositiveRate > 0) && (ranf_mt(tn) < g_allParams.FalsePositiveRate))
 														StateT[tn].inf_queue[cq][StateT[tn].n_queue[cq]++] = {-1, i3, -1};
 													else
 													{
@@ -545,11 +545,11 @@ void InfectSweep(double t, int run) //added run number as argument in order to r
 					{
 						s2 = CalcSpatialInf(ci, ts);
 						//if do digital contact tracing, scale up spatial infectiousness of infectives who are using the app and will be detected
-						if (fct) s2 *= P.ScalingFactorSpatialDigitalContacts;
+						if (fct) s2 *= g_allParams.ScalingFactorSpatialDigitalContacts;
 					}
 					if (HOST_ABSENT(ci)) //// if place is closed then adjust the spatial infectiousness (similar logic to household infectiousness: place closure affects spatial infectiousness _
 					{
-						s2 *= P.PlaceCloseSpatialRelContact;
+						s2 *= g_allParams.PlaceCloseSpatialRelContact;
 						/* NumPCD++; */
 						s5 += s2;
 						StateT[tn].cell_inf[j] = (float)-s5;
@@ -604,8 +604,8 @@ void InfectSweep(double t, int run) //added run number as argument in order to r
 					si = Hosts + ci;
 
 					//calculate flag for digital contact tracing here at the beginning for each individual infector
-					fct = ((P.DoDigitalContactTracing) && (t >= AdUnits[Mcells[si->mcell].adunit].DigitalContactTracingTimeStart)
-						&& (t < AdUnits[Mcells[si->mcell].adunit].DigitalContactTracingTimeStart + P.DigitalContactTracingPolicyDuration) && (Hosts[ci].digitalContactTracingUser == 1)); // && (ts <= (Hosts[ci].detected_time + P.usCaseIsolationDelay)));
+					fct = ((g_allParams.DoDigitalContactTracing) && (t >= AdUnits[Mcells[si->mcell].adunit].DigitalContactTracingTimeStart)
+						&& (t < AdUnits[Mcells[si->mcell].adunit].DigitalContactTracingTimeStart + g_allParams.DigitalContactTracingPolicyDuration) && (Hosts[ci].digitalContactTracingUser == 1)); // && (ts <= (Hosts[ci].detected_time + P.usCaseIsolationDelay)));
 
 
 					//// decide on infectee 
@@ -641,7 +641,7 @@ void InfectSweep(double t, int run) //added run number as argument in order to r
 									//if infectee is also a user, add them as a contact
 									if (Hosts[i3].digitalContactTracingUser && (ci != i3))
 									{
-										if ((Hosts[ci].ncontacts<P.MaxDigitalContactsToTrace)&&(ranf_mt(tn) < s*P.ProportionDigitalContactsIsolate))
+										if ((Hosts[ci].ncontacts<g_allParams.MaxDigitalContactsToTrace)&&(ranf_mt(tn) < s*g_allParams.ProportionDigitalContactsIsolate))
 										{
 											Hosts[ci].ncontacts++; //add to number of contacts made
 											ad = Mcells[Hosts[i3].mcell].adunit;
@@ -657,7 +657,7 @@ void InfectSweep(double t, int run) //added run number as argument in order to r
 										}
 									}
 									//scale down susceptibility so we don't over accept
-									s /= P.ScalingFactorSpatialDigitalContacts;
+									s /= g_allParams.ScalingFactorSpatialDigitalContacts;
 								}
 								if (m < ct->S)  // only bother trying to infect susceptible people
 								{
@@ -665,19 +665,19 @@ void InfectSweep(double t, int run) //added run number as argument in order to r
 									if (bm)
 									{
 										if ((dist2_raw(Households[si->hh].loc_x, Households[si->hh].loc_y,
-											Households[Hosts[i3].hh].loc_x, Households[Hosts[i3].hh].loc_y) > P.MoveRestrRadius2))
-											s *= P.MoveRestrEffect;
+											Households[Hosts[i3].hh].loc_x, Households[Hosts[i3].hh].loc_y) > g_allParams.MoveRestrRadius2))
+											s *= g_allParams.MoveRestrEffect;
 									}
 									else if ((mt->moverest != mi->moverest) && ((mt->moverest == 2) || (mi->moverest == 2)))
-										s *= P.MoveRestrEffect;
+										s *= g_allParams.MoveRestrEffect;
 									if (!f) //// if infector did not have place closed, loop over place types of infectee i3 to see if their places had closed. If they had, amend their susceptibility.
-										if (HOST_ABSENT(i3)) { s *= P.PlaceCloseSpatialRelContact; }/* NumPCD++;} */
+										if (HOST_ABSENT(i3)) { s *= g_allParams.PlaceCloseSpatialRelContact; }/* NumPCD++;} */
 									if ((s == 1) || (ranf_mt(tn) < s)) //// accept/reject
 									{
-										cq = ((int)(ct - Cells)) % P.NumThreads;
-										if ((Hosts[i3].inf == InfStat_Susceptible) && (StateT[tn].n_queue[cq] < P.InfQueuePeakLength)) //Hosts[i3].infector==-1
+										cq = ((int)(ct - Cells)) % g_allParams.NumThreads;
+										if ((Hosts[i3].inf == InfStat_Susceptible) && (StateT[tn].n_queue[cq] < g_allParams.InfQueuePeakLength)) //Hosts[i3].infector==-1
 										{
-											if ((P.FalsePositiveRate > 0) && (ranf_mt(tn) < P.FalsePositiveRate))
+											if ((g_allParams.FalsePositiveRate > 0) && (ranf_mt(tn) < g_allParams.FalsePositiveRate))
 												StateT[tn].inf_queue[cq][StateT[tn].n_queue[cq]++] = { -1, i3, -1 };
 											else
 											{
@@ -696,9 +696,9 @@ void InfectSweep(double t, int run) //added run number as argument in order to r
 
 
 #pragma omp parallel for private(i,k) schedule(static,1)
-	for (j = 0; j < P.NumThreads; j++)
+	for (j = 0; j < g_allParams.NumThreads; j++)
 	{
-		for (k = 0; k < P.NumThreads; k++)
+		for (k = 0; k < g_allParams.NumThreads; k++)
 		{
 			for (i = 0; i < StateT[k].n_queue[j]; i++)
 			{
@@ -726,27 +726,27 @@ void IncubRecoverySweep(double t, int run)
 	unsigned short int ts; //// this timestep
 	unsigned short int tc; //// time at which person becomes case (i.e. moves from infectious and asymptomatic to infectious and symptomatic).
 
-	ts = (unsigned short int) (P.TimeStepsPerDay * t);
+	ts = (unsigned short int) (g_allParams.TimeStepsPerDay * t);
 
-	if (P.DoPlaces)
-		for (i = 0; i < P.NumHolidays; i++)
+	if (g_allParams.DoPlaces)
+		for (i = 0; i < g_allParams.NumHolidays; i++)
 		{
-			ht = P.HolidayStartTime[i] + P.PreControlClusterIdHolOffset;
-			if ((t + P.TimeStep >= ht) && (t < ht))
+			ht = g_allParams.HolidayStartTime[i] + g_allParams.PreControlClusterIdHolOffset;
+			if ((t + g_allParams.TimeStep >= ht) && (t < ht))
 			{
 //				fprintf(stderr, "Holiday %i t=%lg\n", i, t);
-				for (j = 0; j < P.PlaceTypeNum; j++)
+				for (j = 0; j < g_allParams.PlaceTypeNum; j++)
 				{
 #pragma omp parallel for private(ci,k,l,b,tn) schedule(static,1)
-					for(tn=0;tn<P.NumThreads;tn++)
-						for (k = tn; k < P.Nplace[j]; k+=P.NumThreads)
+					for(tn=0;tn<g_allParams.NumThreads;tn++)
+						for (k = tn; k < g_allParams.Nplace[j]; k+=g_allParams.NumThreads)
 						{
-							if ((P.HolidayEffect[j] < 1) && ((P.HolidayEffect[j] == 0) || (ranf_mt(tn) >= P.HolidayEffect[j])))
+							if ((g_allParams.HolidayEffect[j] < 1) && ((g_allParams.HolidayEffect[j] == 0) || (ranf_mt(tn) >= g_allParams.HolidayEffect[j])))
 							{
-								l = (int)(ht * P.TimeStepsPerDay);
+								l = (int)(ht * g_allParams.TimeStepsPerDay);
 								if (Places[j][k].close_start_time > l)
 									Places[j][k].close_start_time = (unsigned short) l;
-								b = (int)((ht + P.HolidayDuration[i]) * P.TimeStepsPerDay);
+								b = (int)((ht + g_allParams.HolidayDuration[i]) * g_allParams.TimeStepsPerDay);
 								if (Places[j][k].close_end_time < b)
 									Places[j][k].close_end_time = (unsigned short) b;
 								for (ci = 0; ci < Places[j][k].n;ci++)
@@ -761,8 +761,8 @@ void IncubRecoverySweep(double t, int run)
 		}
 
 #pragma omp parallel for private(j,b,c,tn,tc,ci,si) schedule(static,1)
-	for (tn = 0; tn < P.NumThreads; tn++)	//// loop over threads
-		for (b = tn; b < P.NCP; b += P.NumThreads)	//// loop/step over populated cells
+	for (tn = 0; tn < g_allParams.NumThreads; tn++)	//// loop over threads
+		for (b = tn; b < g_allParams.populatedCellCount; b += g_allParams.NumThreads)	//// loop/step over populated cells
 		{
 			c = CellLookup[b]; //// find (pointer-to) cell.
 			for (j = ((int)c->L - 1); j >= 0; j--) //// loop backwards over latently infected people, hence it starts from L - 1 and goes to zero. Runs backwards because of pointer swapping?
@@ -775,11 +775,11 @@ void IncubRecoverySweep(double t, int run)
 				si = Hosts + ci;		//// person
 
 				/* Following line not 100% consistent with DoIncub. All severity time points (e.g. SARI time) are added to latent_time, not latent_time + ((int)(P.LatentToSymptDelay / P.TimeStep))*/
-				tc = si->latent_time + ((int)(P.LatentToSymptDelay / P.TimeStep)); //// time that person si/ci becomes case (symptomatic)...
-				if ((P.DoSymptoms) && (ts == tc)) //// ... if now is that time...
+				tc = si->latent_time + ((int)(g_allParams.LatentToSymptDelay / g_allParams.TimeStep)); //// time that person si/ci becomes case (symptomatic)...
+				if ((g_allParams.DoSymptoms) && (ts == tc)) //// ... if now is that time...
 					DoCase(ci, t, ts, tn);		  //// ... change infectious (but asymptomatic) person to infectious and symptomatic. If doing severity, this contains DoMild and DoILI.
 
-				if (P.DoSeverity)
+				if (g_allParams.DoSeverity)
 				{
 					if (ts >= si->SARI_time)					DoSARI(ci, tn);	//// see if you can dispense with inequalities by initializing SARI_time, Critical_time etc. to USHRT_MAX
 					if (ts >= si->Critical_time)				DoCritical(ci, tn);
@@ -803,14 +803,14 @@ void IncubRecoverySweep(double t, int run)
 					}
 					else /// if they die and this timestep is after they've died.
 					{
-						if (HOST_TREATED(ci) && (ranf_mt(tn) < P.TreatDeathDrop))
+						if (HOST_TREATED(ci) && (ranf_mt(tn) < g_allParams.TreatDeathDrop))
 							DoRecover(ci, tn, run);
 						else
 							DoDeath(ci, tn, run);
 					}
 
 					//once host recovers, will no longer make contacts for contact tracing - if we are doing contact tracing and case was infectious when contact tracing was active, increment state vector
-					if ((P.DoDigitalContactTracing) && (Hosts[ci].latent_time>= AdUnits[Mcells[Hosts[ci].mcell].adunit].DigitalContactTracingTimeStart) && (Hosts[ci].recovery_or_death_time < AdUnits[Mcells[Hosts[ci].mcell].adunit].DigitalContactTracingTimeStart + P.DigitalContactTracingPolicyDuration) && (Hosts[ci].digitalContactTracingUser == 1) && (P.OutputDigitalContactDist))
+					if ((g_allParams.DoDigitalContactTracing) && (Hosts[ci].latent_time>= AdUnits[Mcells[Hosts[ci].mcell].adunit].DigitalContactTracingTimeStart) && (Hosts[ci].recovery_or_death_time < AdUnits[Mcells[Hosts[ci].mcell].adunit].DigitalContactTracingTimeStart + g_allParams.DigitalContactTracingPolicyDuration) && (Hosts[ci].digitalContactTracingUser == 1) && (g_allParams.OutputDigitalContactDist))
 					{
 						if (Hosts[ci].ncontacts > MAX_CONTACTS) Hosts[ci].ncontacts = MAX_CONTACTS;
 						//increment bin in State corresponding to this number of contacts
@@ -837,18 +837,18 @@ void DigitalContactTracingSweep(double t)
 	unsigned short int ts, dct_start_time, dct_end_time, contact_time;
 
 	//find current time step
-	ts = (unsigned short int) (P.TimeStepsPerDay * t);
+	ts = (unsigned short int) (g_allParams.TimeStepsPerDay * t);
 
 
 #pragma omp parallel for private(i,j,k,tn,contact,infector,contact_time,dct_start_time,dct_end_time) schedule(static,1)
-	for (tn = 0; tn < P.NumThreads; tn++)
+	for (tn = 0; tn < g_allParams.NumThreads; tn++)
 	{
-		for (i = tn; i < P.NumAdunits; i += P.NumThreads)
+		for (i = tn; i < g_allParams.NumAdunits; i += g_allParams.NumThreads)
 		{
 			if (t >= AdUnits[i].DigitalContactTracingTimeStart)
 			{
 
-				for (j = 0; j < P.NumThreads; j++)
+				for (j = 0; j < g_allParams.NumThreads; j++)
 				{
 					for (k = 0; k < StateT[j].ndct_queue[i];)
 					{
@@ -864,7 +864,7 @@ void DigitalContactTracingSweep(double t)
 						{
 							//i.e. this is an index case that has been detected by becoming symptomatic and added to the digital contact tracing queue
 							dct_start_time = Hosts[contact].dct_trigger_time; //trigger time for these cases is set in DoIncub and already accounts for delay between onset and isolation
-							dct_end_time = dct_start_time + (unsigned short int)(P.LengthDigitalContactIsolation * P.TimeStepsPerDay);
+							dct_end_time = dct_start_time + (unsigned short int)(g_allParams.LengthDigitalContactIsolation * g_allParams.TimeStepsPerDay);
 
 						}
 						else //We are looking at actual contact events between infectious hosts and their contacts.
@@ -876,14 +876,14 @@ void DigitalContactTracingSweep(double t)
 								if (contact_time > Hosts[infector].dct_trigger_time)
 								{
 									//if the contact time was made after host detected, we should use the later time
-									dct_start_time = contact_time + (unsigned short int) (P.DigitalContactTracingDelay * P.TimeStepsPerDay);
+									dct_start_time = contact_time + (unsigned short int) (g_allParams.DigitalContactTracingDelay * g_allParams.TimeStepsPerDay);
 								}
 								else
 								{
 									//if the contact time was made before or at the same time as detection, use the trigger time instead
-									dct_start_time = Hosts[infector].dct_trigger_time + (unsigned short int) (P.DigitalContactTracingDelay * P.TimeStepsPerDay);
+									dct_start_time = Hosts[infector].dct_trigger_time + (unsigned short int) (g_allParams.DigitalContactTracingDelay * g_allParams.TimeStepsPerDay);
 								}
-								dct_end_time = dct_start_time + (unsigned short int)(P.LengthDigitalContactIsolation * P.TimeStepsPerDay);
+								dct_end_time = dct_start_time + (unsigned short int)(g_allParams.LengthDigitalContactIsolation * g_allParams.TimeStepsPerDay);
 							}
 							else
 							{
@@ -917,39 +917,39 @@ void DigitalContactTracingSweep(double t)
 									//the information about the contact event there and would need to loop over all contacts again to look for their index case
 									//This would cause race conditions due to having a loop over adunits within threaded loop over admin units
 									//Only set test times if P.DoDCTTest. If P.DoDCTTest==0, but we are finding contacts of contacts, we check to see if contacts should become index cases every day they are in isolation.
-									if (P.DoDCTTest)
+									if (g_allParams.DoDCTTest)
 									{
 										if (Hosts[contact].index_case_dct == 1)
 										{
 											//set testing time (which has a different delay to contact testing delay), but no need to set index_case link
-											Hosts[contact].dct_test_time = dct_start_time + (unsigned short int)(P.DelayToTestIndexCase * P.TimeStepsPerDay);
+											Hosts[contact].dct_test_time = dct_start_time + (unsigned short int)(g_allParams.DelayToTestIndexCase * g_allParams.TimeStepsPerDay);
 											//if host is infectious at test time
 											if ((Hosts[contact].dct_test_time >= Hosts[contact].latent_time) && (Hosts[contact].dct_test_time < Hosts[contact].recovery_or_death_time))
 											{
 												//if false negative, remove from queue by setting the end time to the test time
-												if ((P.SensitivityDCT == 0) || ((P.SensitivityDCT < 1) && (ranf_mt(tn) >= P.SensitivityDCT)))
+												if ((g_allParams.SensitivityDCT == 0) || ((g_allParams.SensitivityDCT < 1) && (ranf_mt(tn) >= g_allParams.SensitivityDCT)))
 												{
 													Hosts[contact].dct_end_time = Hosts[contact].dct_test_time;
 													//set index_dct_flag to 2 to indicate that contacts should be removed, if we are removing based on negative test result of index case
-													if (P.RemoveContactsOfNegativeIndexCase) Hosts[contact].index_case_dct = 2;
+													if (g_allParams.RemoveContactsOfNegativeIndexCase) Hosts[contact].index_case_dct = 2;
 												}
 											}
 											//if host is non-infectious)
 											else
 											{
 												//if true negative, remove from list
-												if ((P.SpecificityDCT == 1) || ((P.SpecificityDCT > 0) && (ranf_mt(tn) < P.SpecificityDCT)))
+												if ((g_allParams.SpecificityDCT == 1) || ((g_allParams.SpecificityDCT > 0) && (ranf_mt(tn) < g_allParams.SpecificityDCT)))
 												{
 													//again mark them to be removed from list at test time rather than end_time, and change index_case_dct flag
 													Hosts[contact].dct_end_time = Hosts[contact].dct_test_time;
-													if (P.RemoveContactsOfNegativeIndexCase) Hosts[contact].index_case_dct = 2;
+													if (g_allParams.RemoveContactsOfNegativeIndexCase) Hosts[contact].index_case_dct = 2;
 												}
 											}
 										}
 										else if (Hosts[contact].index_case_dct == 0)
 										{
 											//if their infector is set to be removed from the list at test time, and their contacts will also be removed at this stage
-											if ((Hosts[infector].index_case_dct == 2) && (P.RemoveContactsOfNegativeIndexCase))
+											if ((Hosts[infector].index_case_dct == 2) && (g_allParams.RemoveContactsOfNegativeIndexCase))
 											{
 												//set end time to match end time of infector
 												Hosts[contact].dct_end_time = Hosts[infector].dct_end_time;
@@ -957,7 +957,7 @@ void DigitalContactTracingSweep(double t)
 											else
 											{
 												//set testing time
-												Hosts[contact].dct_test_time = dct_start_time + (unsigned short int)(P.DelayToTestDCTContacts * P.TimeStepsPerDay);
+												Hosts[contact].dct_test_time = dct_start_time + (unsigned short int)(g_allParams.DelayToTestDCTContacts * g_allParams.TimeStepsPerDay);
 											}
 										}
 									}
@@ -985,35 +985,35 @@ void DigitalContactTracingSweep(double t)
 							//else if contact is already being contact traced
 							else if (Hosts[contact].digitalContactTraced == 1)
 							{
-								if (P.DoDCTTest)
+								if (g_allParams.DoDCTTest)
 								{
 									//if case has been detected due to being symptomatic, then we will update their testing time if they would be tested earlier based on being an index case as opposed to being a contact of another case
 									//If they are already being contact traced and testing is on, they should have been set a test_time
-									if ((Hosts[contact].index_case_dct == 1) && (Hosts[contact].dct_test_time > (dct_start_time + (unsigned short int)(P.DelayToTestIndexCase * P.TimeStepsPerDay))))
+									if ((Hosts[contact].index_case_dct == 1) && (Hosts[contact].dct_test_time > (dct_start_time + (unsigned short int)(g_allParams.DelayToTestIndexCase * g_allParams.TimeStepsPerDay))))
 									{
-										Hosts[contact].dct_test_time = dct_start_time + (unsigned short int)(P.DelayToTestIndexCase * P.TimeStepsPerDay);
+										Hosts[contact].dct_test_time = dct_start_time + (unsigned short int)(g_allParams.DelayToTestIndexCase * g_allParams.TimeStepsPerDay);
 										//update end time (which is always at least equal to, but may be later that the current one)
 										Hosts[contact].dct_end_time = dct_end_time;
 										//check to see if test will be negative, if so, tag them for early removal and update index_dct_flag
 										if ((Hosts[contact].dct_test_time >= Hosts[contact].latent_time) && (Hosts[contact].dct_test_time < Hosts[contact].recovery_or_death_time))
 										{
 											//if false negative, remove from
-											if ((P.SensitivityDCT == 0) || ((P.SensitivityDCT < 1) && (ranf_mt(tn) >= P.SensitivityDCT)))
+											if ((g_allParams.SensitivityDCT == 0) || ((g_allParams.SensitivityDCT < 1) && (ranf_mt(tn) >= g_allParams.SensitivityDCT)))
 											{
 												Hosts[contact].dct_end_time = Hosts[contact].dct_test_time;
 												//set index_dct_flag to 2 to indicate that contacts should be removed
-												if (P.RemoveContactsOfNegativeIndexCase) Hosts[contact].index_case_dct = 2;
+												if (g_allParams.RemoveContactsOfNegativeIndexCase) Hosts[contact].index_case_dct = 2;
 											}
 										}
 										//if host is non-infectious
 										else
 										{
 											//if true negative, remove from list
-											if ((P.SpecificityDCT == 1) || ((P.SpecificityDCT > 0) && (ranf_mt(tn) < P.SpecificityDCT)))
+											if ((g_allParams.SpecificityDCT == 1) || ((g_allParams.SpecificityDCT > 0) && (ranf_mt(tn) < g_allParams.SpecificityDCT)))
 											{
 												//again mark them to be removed from list at test time rather than end_time, and change index_case_dct flag
 												Hosts[contact].dct_end_time = Hosts[contact].dct_test_time;
-												if (P.RemoveContactsOfNegativeIndexCase) Hosts[contact].index_case_dct = 2;
+												if (g_allParams.RemoveContactsOfNegativeIndexCase) Hosts[contact].index_case_dct = 2;
 											}
 										}
 									}
@@ -1021,7 +1021,7 @@ void DigitalContactTracingSweep(double t)
 									{
 										//we don't want to remove this contact if they are also linked to another case - their testing time shouldn't change.
 										//but we'll only extend their end time if they wouldn't potentially be removed by having a negative contact
-										if ((!P.RemoveContactsOfNegativeIndexCase) || ((P.RemoveContactsOfNegativeIndexCase) && (Hosts[infector].index_case_dct == 1)))
+										if ((!g_allParams.RemoveContactsOfNegativeIndexCase) || ((g_allParams.RemoveContactsOfNegativeIndexCase) && (Hosts[infector].index_case_dct == 1)))
 										{
 											//extend end time
 											Hosts[contact].dct_end_time = dct_end_time;
@@ -1062,9 +1062,9 @@ void DigitalContactTracingSweep(double t)
 	}
 
 #pragma omp parallel for private(i,j,k,tn,contact) schedule(static,1)
-	for (tn = 0; tn < P.NumThreads; tn++)
+	for (tn = 0; tn < g_allParams.NumThreads; tn++)
 	{
-		for (i = tn; i < P.NumAdunits; i += P.NumThreads)
+		for (i = tn; i < g_allParams.NumAdunits; i += g_allParams.NumThreads)
 		{
 			if (t >= AdUnits[i].DigitalContactTracingTimeStart)
 			{
@@ -1074,7 +1074,7 @@ void DigitalContactTracingSweep(double t)
 					contact = AdUnits[i].dct[j];
 
 					//first do testing of index cases and their contacts
-					if (P.DoDCTTest)
+					if (g_allParams.DoDCTTest)
 					{
 						if ((Hosts[contact].dct_test_time == ts) && (Hosts[contact].index_case_dct == 0))
 						{
@@ -1082,12 +1082,12 @@ void DigitalContactTracingSweep(double t)
 							if ((abs(Hosts[contact].inf) == 2) || (Hosts[contact].inf == -1)) //either asymptomatic infectious, symptomatic infectious or presymptomatic infectious
 							{
 								//if the test is a false negative
-								if ((P.SensitivityDCT == 0) || ((P.SensitivityDCT < 1) && (ranf_mt(tn) >= P.SensitivityDCT)))
+								if ((g_allParams.SensitivityDCT == 0) || ((g_allParams.SensitivityDCT < 1) && (ranf_mt(tn) >= g_allParams.SensitivityDCT)))
 								{
 									Hosts[contact].dct_end_time = ts;
 								}
 								//else if a true positive
-								else if (P.FindContactsOfDCTContacts)
+								else if (g_allParams.FindContactsOfDCTContacts)
 								{
 									//set them to be an index case
 									Hosts[contact].index_case_dct = 1;
@@ -1105,7 +1105,7 @@ void DigitalContactTracingSweep(double t)
 							else
 							{
 								//and is a true negative
-								if ((P.SpecificityDCT == 1) || ((P.SpecificityDCT > 0) && (ranf_mt(tn) < P.SpecificityDCT)))
+								if ((g_allParams.SpecificityDCT == 1) || ((g_allParams.SpecificityDCT > 0) && (ranf_mt(tn) < g_allParams.SpecificityDCT)))
 								{
 									Hosts[contact].dct_end_time = ts;
 								}
@@ -1113,7 +1113,7 @@ void DigitalContactTracingSweep(double t)
 							}
 						}
 					}
-					else if (P.FindContactsOfDCTContacts)
+					else if (g_allParams.FindContactsOfDCTContacts)
 					{
 						//check every day to see if contacts become index cases - but they have to be infectious. Otherwise we could set the trigger time and cause their contacts to be traced when they are not being traced themselves.
 						if ((Hosts[contact].index_case_dct == 0) && ((abs(Hosts[contact].inf) == 2) || (Hosts[contact].inf == -1)))
@@ -1185,12 +1185,12 @@ int TreatSweep(double t)
 	int global_trig;
 	double r;
 
-	ts = (unsigned short int) (P.TimeStepsPerDay * t);
+	ts = (unsigned short int) (g_allParams.TimeStepsPerDay * t);
 	f = f1 = 0;
-	if (P.DoGlobalTriggers)
+	if (g_allParams.DoGlobalTriggers)
 	{
-		if (P.DoPerCapitaTriggers)
-			global_trig = (int)floor(((double)State.trigDC) * P.GlobalIncThreshPop / ((double)P.N));
+		if (g_allParams.DoPerCapitaTriggers)
+			global_trig = (int)floor(((double)State.trigDC) * g_allParams.GlobalIncThreshPop / ((double)g_allParams.populationSize));
 		else
 			global_trig = State.trigDC;
 	}
@@ -1198,17 +1198,17 @@ int TreatSweep(double t)
 		global_trig = 0;
 
 	///// block loops over places and determines whom to prophylactically treat
-	if ((P.DoPlaces) && (t >= P.TreatTimeStart) && (t < P.TreatTimeStart + P.TreatPlaceGeogDuration) && (State.cumT < P.TreatMaxCourses))
+	if ((g_allParams.DoPlaces) && (t >= g_allParams.TreatTimeStart) && (t < g_allParams.TreatTimeStart + g_allParams.TreatPlaceGeogDuration) && (State.cumT < g_allParams.TreatMaxCourses))
 	{
-		tstf = (unsigned short int) (P.TimeStepsPerDay * (t + P.TreatDelayMean + P.TreatProphCourseLength));
+		tstf = (unsigned short int) (g_allParams.TimeStepsPerDay * (t + g_allParams.TreatDelayMean + g_allParams.TreatProphCourseLength));
 #pragma omp parallel for private(i,j,k,l,m,f) reduction(+:f1) schedule(static,1)
-		for (i = 0; i < P.NumThreads; i++)
-			for (j = 0; j < P.PlaceTypeNum; j++)
+		for (i = 0; i < g_allParams.NumThreads; i++)
+			for (j = 0; j < g_allParams.PlaceTypeNum; j++)
 			{
 				for (k = 0; k < StateT[i].np_queue[j]; k++)
 				{
 					l = StateT[i].p_queue[j][k];
-					if (P.DoPlaceGroupTreat)
+					if (g_allParams.DoPlaceGroupTreat)
 					{
 						f = StateT[i].pg_queue[j][k];
 						for (m = ((int)Places[j][l].group_start[f]); m < ((int)(Places[j][l].group_start[f] + Places[j][l].group_size[f])); m++)
@@ -1223,7 +1223,7 @@ int TreatSweep(double t)
 																(int) Places[j][l].group_size[f]);
 														else
 							*/
-							if ((!HOST_TO_BE_TREATED(Places[j][l].members[m])) && ((P.TreatPlaceTotalProp[j] == 1) || (ranf_mt(i) < P.TreatPlaceTotalProp[j])))
+							if ((!HOST_TO_BE_TREATED(Places[j][l].members[m])) && ((g_allParams.TreatPlaceTotalProp[j] == 1) || (ranf_mt(i) < g_allParams.TreatPlaceTotalProp[j])))
 								DoProph(Places[j][l].members[m], ts, i);
 						}
 					}
@@ -1236,7 +1236,7 @@ int TreatSweep(double t)
 							for (m = 0; m < Places[j][l].n; m++)
 								if (!HOST_TO_BE_TREATED(Places[j][l].members[m]))
 								{
-									if ((P.TreatPlaceTotalProp[j] == 1) || (ranf_mt(i) < P.TreatPlaceTotalProp[j]))
+									if ((g_allParams.TreatPlaceTotalProp[j] == 1) || (ranf_mt(i) < g_allParams.TreatPlaceTotalProp[j]))
 										DoProph(Places[j][l].members[m], ts, i);
 								}
 						}
@@ -1248,35 +1248,35 @@ int TreatSweep(double t)
 	}
 
 	///// block vaccinates everyone in mass vaccination queue. Don't know why loop is done twice (although State.mvacc_cum is reset at end so will relate to that)
-	if ((P.DoMassVacc) && (t >= P.VaccTimeStart))
+	if ((g_allParams.DoMassVacc) && (t >= g_allParams.VaccTimeStart))
 		for (j = 0; j < 2; j++)
 		{
-			m = (int)P.VaccMaxCourses;
+			m = (int)g_allParams.VaccMaxCourses;
 			if (m > State.n_mvacc) m = State.n_mvacc;
 #pragma omp parallel for private(i) schedule(static,1000)
 			for (i = State.mvacc_cum; i < m; i++)
 				DoVacc(State.mvacc_queue[i], ts);
 			State.mvacc_cum = m;
 		}
-	if ((t >= P.TreatTimeStart) || (t >= P.VaccTimeStartGeo) || (t >= P.PlaceCloseTimeStart) || (t >= P.MoveRestrTimeStart) || (t >= P.SocDistTimeStart) || (t >= P.KeyWorkerProphTimeStart)) //changed this to start time geo
+	if ((t >= g_allParams.TreatTimeStart) || (t >= g_allParams.VaccTimeStartGeo) || (t >= g_allParams.PlaceCloseTimeStart) || (t >= g_allParams.MoveRestrTimeStart) || (t >= g_allParams.SocDistTimeStart) || (t >= g_allParams.KeyWorkerProphTimeStart)) //changed this to start time geo
 	{
-		tstf = (unsigned short int) (P.TimeStepsPerDay * (t + P.TreatProphCourseLength) - 1);
-		tstb = (unsigned short int) (P.TimeStepsPerDay * (t + P.TreatDelayMean));
-		tsvb = (unsigned short int) (P.TimeStepsPerDay * (t + P.VaccDelayMean));
-		tspf = (unsigned short int) ceil(P.TimeStepsPerDay * (t + P.PlaceCloseDelayMean + P.PlaceCloseDuration));
-		tsmf = (unsigned short int) ceil(P.TimeStepsPerDay * (t + P.MoveRestrDuration));
-		tsmb = (unsigned short int) floor(P.TimeStepsPerDay * (t + P.MoveDelayMean));
-		tssdf = (unsigned short int) ceil(P.TimeStepsPerDay * (t + P.SocDistDurationCurrent));
-		tskwpf = (unsigned short int) ceil(P.TimeStepsPerDay * (t + P.KeyWorkerProphRenewalDuration));
-		nckwp = (int)ceil(P.KeyWorkerProphDuration / P.TreatProphCourseLength);
+		tstf = (unsigned short int) (g_allParams.TimeStepsPerDay * (t + g_allParams.TreatProphCourseLength) - 1);
+		tstb = (unsigned short int) (g_allParams.TimeStepsPerDay * (t + g_allParams.TreatDelayMean));
+		tsvb = (unsigned short int) (g_allParams.TimeStepsPerDay * (t + g_allParams.VaccDelayMean));
+		tspf = (unsigned short int) ceil(g_allParams.TimeStepsPerDay * (t + g_allParams.PlaceCloseDelayMean + g_allParams.PlaceCloseDuration));
+		tsmf = (unsigned short int) ceil(g_allParams.TimeStepsPerDay * (t + g_allParams.MoveRestrDuration));
+		tsmb = (unsigned short int) floor(g_allParams.TimeStepsPerDay * (t + g_allParams.MoveDelayMean));
+		tssdf = (unsigned short int) ceil(g_allParams.TimeStepsPerDay * (t + g_allParams.SocDistDurationCurrent));
+		tskwpf = (unsigned short int) ceil(g_allParams.TimeStepsPerDay * (t + g_allParams.KeyWorkerProphRenewalDuration));
+		nckwp = (int)ceil(g_allParams.KeyWorkerProphDuration / g_allParams.TreatProphCourseLength);
 
 #pragma omp parallel for private(tn,i,i2,j,j2,k,l,m,b,bs,minx,maxx,miny,f2,f3,f4,trig_thresh,r,ad,ad2,adi,interventionFlag) reduction(+:f) schedule(static,1)
-		for (tn = 0; tn < P.NumThreads; tn++)
-			for (bs = tn; bs < P.NMCP; bs += P.NumThreads) //// loop over populated microcells
+		for (tn = 0; tn < g_allParams.NumThreads; tn++)
+			for (bs = tn; bs < g_allParams.NMCP; bs += g_allParams.NumThreads) //// loop over populated microcells
 			{
 				b = (int)(McellLookup[bs] - Mcells); //// microcell number
-				adi = (P.DoAdUnits) ? Mcells[b].adunit : -1;
-				ad = (P.DoAdUnits) ? AdUnits[adi].id : 0;
+				adi = (g_allParams.DoAdUnits) ? Mcells[b].adunit : -1;
+				ad = (g_allParams.DoAdUnits) ? AdUnits[adi].id : 0;
 
 					//// Code block goes through various types of treatments/interventions (vaccination/movement restrictions etc.),
 					//// assesses whether various triggers (counts) are over a certain threshold, (specified in ReadParams)
@@ -1303,40 +1303,40 @@ int TreatSweep(double t)
 						for (i = 0; i < Mcells[b].n; i++)
 						{
 							l = Mcells[b].members[i];
-							if ((!HOST_TO_BE_TREATED(l)) && ((P.TreatPropRadial == 1) || (ranf_mt(tn) < P.TreatPropRadial)))
+							if ((!HOST_TO_BE_TREATED(l)) && ((g_allParams.TreatPropRadial == 1) || (ranf_mt(tn) < g_allParams.TreatPropRadial)))
 								DoProphNoDelay(l, ts, tn, 1);
 						}
 					}
-					if (P.DoGlobalTriggers)
-						f2 = (global_trig >= P.TreatCellIncThresh);
-					else if (P.DoAdminTriggers)
+					if (g_allParams.DoGlobalTriggers)
+						f2 = (global_trig >= g_allParams.TreatCellIncThresh);
+					else if (g_allParams.DoAdminTriggers)
 					{
-						trig_thresh = (P.DoPerCapitaTriggers) ? ((int)ceil(((double)(AdUnits[adi].n * P.TreatCellIncThresh)) / P.IncThreshPop)) : (int)P.TreatCellIncThresh;
+						trig_thresh = (g_allParams.DoPerCapitaTriggers) ? ((int)ceil(((double)(AdUnits[adi].n * g_allParams.TreatCellIncThresh)) / g_allParams.IncThreshPop)) : (int)g_allParams.TreatCellIncThresh;
 						f2 = (State.trigDC_adunit[adi] > trig_thresh);
 					}
 					else
 					{
-						trig_thresh = (P.DoPerCapitaTriggers) ? ((int)ceil(((double)(Mcells[b].n * P.TreatCellIncThresh)) / P.IncThreshPop)) : (int)P.TreatCellIncThresh;
+						trig_thresh = (g_allParams.DoPerCapitaTriggers) ? ((int)ceil(((double)(Mcells[b].n * g_allParams.TreatCellIncThresh)) / g_allParams.IncThreshPop)) : (int)g_allParams.TreatCellIncThresh;
 						f2 = (Mcells[b].treat_trig >= trig_thresh);
 					}
-					if ((t >= P.TreatTimeStart) && (Mcells[b].treat == 0) && (f2) && (P.TreatRadius2 > 0))
+					if ((t >= g_allParams.TreatTimeStart) && (Mcells[b].treat == 0) && (f2) && (g_allParams.TreatRadius2 > 0))
 					{
-						minx = (b / P.nmch); miny = (b % P.nmch);
+						minx = (b / g_allParams.nmch); miny = (b % g_allParams.nmch);
 						k = b;
 						maxx = 0;
 						i = j = m = f2 = 0;
 						l = f3 = 1;
-						if ((!P.TreatByAdminUnit) || (ad > 0))
+						if ((!g_allParams.TreatByAdminUnit) || (ad > 0))
 						{
-							ad2 = ad / P.TreatAdminUnitDivisor;
+							ad2 = ad / g_allParams.TreatAdminUnitDivisor;
 							do
 							{
-								if ((minx >= 0) && (minx < P.nmcw) && (miny >= 0) && (miny < P.nmch))
+								if ((minx >= 0) && (minx < g_allParams.nmcw) && (miny >= 0) && (miny < g_allParams.nmch))
 								{
-									if (P.TreatByAdminUnit)
-										f4 = (AdUnits[Mcells[k].adunit].id / P.TreatAdminUnitDivisor == ad2);
+									if (g_allParams.TreatByAdminUnit)
+										f4 = (AdUnits[Mcells[k].adunit].id / g_allParams.TreatAdminUnitDivisor == ad2);
 									else
-										f4 = ((r = dist2_mm(Mcells + b, Mcells + k)) < P.TreatRadius2);
+										f4 = ((r = dist2_mm(Mcells + b, Mcells + k)) < g_allParams.TreatRadius2);
 									if (f4)
 									{
 										f = f2 = 1;
@@ -1364,8 +1364,8 @@ int TreatSweep(double t)
 									if (i == 0) l++;
 									if (j == 1) { f3 = f2; f2 = 0; }
 								}
-								k = ((minx + P.nmcw) % P.nmcw) * P.nmch + (miny + P.nmch) % P.nmch;
-							} while ((f3) && (maxx < P.TreatMaxCoursesPerCase));
+								k = ((minx + g_allParams.nmcw) % g_allParams.nmcw) * g_allParams.nmch + (miny + g_allParams.nmch) % g_allParams.nmch;
+							} while ((f3) && (maxx < g_allParams.TreatMaxCoursesPerCase));
 						}
 					}
 
@@ -1386,7 +1386,7 @@ int TreatSweep(double t)
 							{
 								l = Mcells[b].members[i];
 								//#pragma omp critical (state_cumV_daily) //added this
-								if (((P.VaccProp == 1) || (ranf_mt(tn) < P.VaccProp)))
+								if (((g_allParams.VaccProp == 1) || (ranf_mt(tn) < g_allParams.VaccProp)))
 								{
 									//add to the queue
 									DoVaccNoDelay(l,ts);
@@ -1395,42 +1395,42 @@ int TreatSweep(double t)
 							Mcells[b].vacc = 2;
 						}
 					}
-					if (P.DoGlobalTriggers)
-						f2 = (global_trig >= P.VaccCellIncThresh);
-					else if (P.DoAdminTriggers)
+					if (g_allParams.DoGlobalTriggers)
+						f2 = (global_trig >= g_allParams.VaccCellIncThresh);
+					else if (g_allParams.DoAdminTriggers)
 					{
-						trig_thresh = (P.DoPerCapitaTriggers) ? ((int)ceil(((double)(AdUnits[adi].n * P.VaccCellIncThresh)) / P.IncThreshPop)) : (int)P.VaccCellIncThresh;
+						trig_thresh = (g_allParams.DoPerCapitaTriggers) ? ((int)ceil(((double)(AdUnits[adi].n * g_allParams.VaccCellIncThresh)) / g_allParams.IncThreshPop)) : (int)g_allParams.VaccCellIncThresh;
 						f2 = (State.trigDC_adunit[adi] > trig_thresh);
 					}
 					else
 					{
-						trig_thresh = (P.DoPerCapitaTriggers) ? ((int)ceil(((double)(Mcells[b].n * P.VaccCellIncThresh)) / P.IncThreshPop)) : (int)P.VaccCellIncThresh;
+						trig_thresh = (g_allParams.DoPerCapitaTriggers) ? ((int)ceil(((double)(Mcells[b].n * g_allParams.VaccCellIncThresh)) / g_allParams.IncThreshPop)) : (int)g_allParams.VaccCellIncThresh;
 						f2 = (Mcells[b].treat_trig >= trig_thresh);
 					}
-					if ((!P.DoMassVacc) && (P.VaccRadius2 > 0) && (t >= P.VaccTimeStartGeo) && (Mcells[b].vacc == 0) && (f2)) //changed from VaccTimeStart to VaccTimeStarGeo
+					if ((!g_allParams.DoMassVacc) && (g_allParams.VaccRadius2 > 0) && (t >= g_allParams.VaccTimeStartGeo) && (Mcells[b].vacc == 0) && (f2)) //changed from VaccTimeStart to VaccTimeStarGeo
 					{
-						minx = (b / P.nmch); miny = (b % P.nmch);
+						minx = (b / g_allParams.nmch); miny = (b % g_allParams.nmch);
 						k = b;
 						i = j = m = f2 = 0;
 						l = f3 = 1;
-						if ((!P.VaccByAdminUnit) || (ad > 0))
+						if ((!g_allParams.VaccByAdminUnit) || (ad > 0))
 						{
-							ad2 = ad / P.VaccAdminUnitDivisor;
+							ad2 = ad / g_allParams.VaccAdminUnitDivisor;
 							do
 							{
-								if ((minx >= 0) && (minx < P.nmcw) && (miny >= 0) && (miny < P.nmch))
+								if ((minx >= 0) && (minx < g_allParams.nmcw) && (miny >= 0) && (miny < g_allParams.nmch))
 								{
-									if (P.VaccByAdminUnit)
+									if (g_allParams.VaccByAdminUnit)
 									{
-										f4 = (AdUnits[Mcells[k].adunit].id / P.VaccAdminUnitDivisor == ad2);
+										f4 = (AdUnits[Mcells[k].adunit].id / g_allParams.VaccAdminUnitDivisor == ad2);
 										r = 1e20;
 									}
 									else
-										f4 = ((r = dist2_mm(Mcells + b, Mcells + k)) < P.VaccRadius2);
+										f4 = ((r = dist2_mm(Mcells + b, Mcells + k)) < g_allParams.VaccRadius2);
 									if (f4)
 									{
 										f = f2 = 1;
-										if (r < P.VaccMinRadius2)
+										if (r < g_allParams.VaccMinRadius2)
 											Mcells[k].vacc = 3;
 										else if ((Mcells[k].n > 0) && (Mcells[k].vacc == 0))
 										{
@@ -1455,7 +1455,7 @@ int TreatSweep(double t)
 									if (i == 0) l++;
 									if (j == 1) { f3 = f2; f2 = 0; }
 								}
-								k = ((minx + P.nmcw) % P.nmcw) * P.nmch + (miny + P.nmch) % P.nmch;
+								k = ((minx + g_allParams.nmcw) % g_allParams.nmcw) * g_allParams.nmch + (miny + g_allParams.nmch) % g_allParams.nmch;
 							} while (f3);
 						}
 					}
@@ -1466,75 +1466,75 @@ int TreatSweep(double t)
 
 
 					///// note that here f2 bool asks whether trigger lower than stop threshold. A few blocks down meaning changes to almost the opposite: asking whether trigger has exceeded threshold in order to close places for first time.
-					if (P.DoGlobalTriggers)
-						f2 = (global_trig < P.PlaceCloseCellIncStopThresh);
-					else if (P.DoAdminTriggers)
+					if (g_allParams.DoGlobalTriggers)
+						f2 = (global_trig < g_allParams.PlaceCloseCellIncStopThresh);
+					else if (g_allParams.DoAdminTriggers)
 					{
-						trig_thresh = (P.DoPerCapitaTriggers) ? ((int)ceil(((double)(AdUnits[adi].n * P.PlaceCloseCellIncStopThresh)) / P.IncThreshPop)) : P.PlaceCloseCellIncStopThresh;
+						trig_thresh = (g_allParams.DoPerCapitaTriggers) ? ((int)ceil(((double)(AdUnits[adi].n * g_allParams.PlaceCloseCellIncStopThresh)) / g_allParams.IncThreshPop)) : g_allParams.PlaceCloseCellIncStopThresh;
 						f2 = (State.trigDC_adunit[adi] < trig_thresh);
 					}
 					else
 					{
-						trig_thresh = (P.DoPerCapitaTriggers) ? ((int)ceil(((double)(Mcells[b].n * P.PlaceCloseCellIncStopThresh)) / P.IncThreshPop)) : P.PlaceCloseCellIncStopThresh;
+						trig_thresh = (g_allParams.DoPerCapitaTriggers) ? ((int)ceil(((double)(Mcells[b].n * g_allParams.PlaceCloseCellIncStopThresh)) / g_allParams.IncThreshPop)) : g_allParams.PlaceCloseCellIncStopThresh;
 						f2 = (Mcells[b].treat_trig < trig_thresh);
 					}
 					if ((Mcells[b].placeclose == 2) && ((f2) || (ts >= Mcells[b].place_end_time))) //// if place closure has started, the places in this microcell are closed, and either stop threshold has been reached or place_end_time has passed, go through block
 					{
 						f = 1;
-						Mcells[b].placeclose = P.DoPlaceCloseOnceOnly;
+						Mcells[b].placeclose = g_allParams.DoPlaceCloseOnceOnly;
 						Mcells[b].place_end_time = ts;
 						Mcells[b].place_trig = 0;
 						if (f2)
 						{
-							for (j2 = 0; j2 < P.PlaceTypeNum; j2++)
-								if (j2 != P.HotelPlaceType)
+							for (j2 = 0; j2 < g_allParams.PlaceTypeNum; j2++)
+								if (j2 != g_allParams.HotelPlaceType)
 									for (i2 = 0; i2 < Mcells[b].np[j2]; i2++)
 										DoPlaceOpen(j2, Mcells[b].places[j2][i2], ts, tn);
 						}
 					}
 
 
-					if ((P.DoPlaces) && (t >= P.PlaceCloseTimeStart) && (Mcells[b].placeclose == 0))
+					if ((g_allParams.DoPlaces) && (t >= g_allParams.PlaceCloseTimeStart) && (Mcells[b].placeclose == 0))
 					{
 						///// note that here f2 bool asks whether trigger has exceeded threshold in order to close places for first time.A few blocks up meaning was almost the opposite: asking whether trigger lower than stop threshold.
 
-						if (P.DoGlobalTriggers)
+						if (g_allParams.DoGlobalTriggers)
 						{
-							f2 = (global_trig >= P.PlaceCloseCellIncThresh);
+							f2 = (global_trig >= g_allParams.PlaceCloseCellIncThresh);
 						}
-						else if (P.DoAdminTriggers)
+						else if (g_allParams.DoAdminTriggers)
 						{
-							trig_thresh = (P.DoPerCapitaTriggers) ? ((int)ceil(((double)(AdUnits[adi].n * P.PlaceCloseCellIncThresh)) / P.IncThreshPop)) : P.PlaceCloseCellIncThresh;
+							trig_thresh = (g_allParams.DoPerCapitaTriggers) ? ((int)ceil(((double)(AdUnits[adi].n * g_allParams.PlaceCloseCellIncThresh)) / g_allParams.IncThreshPop)) : g_allParams.PlaceCloseCellIncThresh;
 							f2 = (State.trigDC_adunit[adi] > trig_thresh);
 						}
 						else
 						{
-							trig_thresh = (P.DoPerCapitaTriggers) ? ((int)ceil(((double)(Mcells[b].n * P.PlaceCloseCellIncThresh)) / P.IncThreshPop)) : P.PlaceCloseCellIncThresh;
+							trig_thresh = (g_allParams.DoPerCapitaTriggers) ? ((int)ceil(((double)(Mcells[b].n * g_allParams.PlaceCloseCellIncThresh)) / g_allParams.IncThreshPop)) : g_allParams.PlaceCloseCellIncThresh;
 							f2 = (Mcells[b].treat_trig >= trig_thresh);
 						}
-						if (((P.PlaceCloseByAdminUnit) && (AdUnits[Mcells[b].adunit].place_close_trig < USHRT_MAX - 1)
-							&& (((double)AdUnits[Mcells[b].adunit].place_close_trig) / ((double)AdUnits[Mcells[b].adunit].NP) > P.PlaceCloseAdunitPropThresh))
-							|| ((!P.PlaceCloseByAdminUnit) && (f2)))
+						if (((g_allParams.PlaceCloseByAdminUnit) && (AdUnits[Mcells[b].adunit].place_close_trig < USHRT_MAX - 1)
+							&& (((double)AdUnits[Mcells[b].adunit].place_close_trig) / ((double)AdUnits[Mcells[b].adunit].NP) > g_allParams.PlaceCloseAdunitPropThresh))
+							|| ((!g_allParams.PlaceCloseByAdminUnit) && (f2)))
 						{
 							//							if(P.PlaceCloseByAdminUnit) AdUnits[Mcells[b].adunit].place_close_trig=USHRT_MAX-1; // This means schools only close once
 							interventionFlag = 1;
-							if ((P.DoInterventionDelaysByAdUnit)&&((t <= AdUnits[Mcells[b].adunit].PlaceCloseTimeStart) || (t >= (AdUnits[Mcells[b].adunit].PlaceCloseTimeStart + AdUnits[Mcells[b].adunit].PlaceCloseDuration))))
+							if ((g_allParams.DoInterventionDelaysByAdUnit)&&((t <= AdUnits[Mcells[b].adunit].PlaceCloseTimeStart) || (t >= (AdUnits[Mcells[b].adunit].PlaceCloseTimeStart + AdUnits[Mcells[b].adunit].PlaceCloseDuration))))
 									interventionFlag = 0;
 
-							if ((interventionFlag == 1)&&((!P.PlaceCloseByAdminUnit) || (ad > 0)))
+							if ((interventionFlag == 1)&&((!g_allParams.PlaceCloseByAdminUnit) || (ad > 0)))
 							{
-								ad2 = ad / P.PlaceCloseAdminUnitDivisor;
+								ad2 = ad / g_allParams.PlaceCloseAdminUnitDivisor;
 								if ((Mcells[b].n > 0) && (Mcells[b].placeclose == 0))
 								{
 									//if doing intervention delays and durations by admin unit based on global triggers
-									if (P.DoInterventionDelaysByAdUnit)
-										Mcells[b].place_end_time = (unsigned short int) ceil(P.TimeStepsPerDay * (t + P.PlaceCloseDelayMean + AdUnits[Mcells[b].adunit].PlaceCloseDuration));
+									if (g_allParams.DoInterventionDelaysByAdUnit)
+										Mcells[b].place_end_time = (unsigned short int) ceil(g_allParams.TimeStepsPerDay * (t + g_allParams.PlaceCloseDelayMean + AdUnits[Mcells[b].adunit].PlaceCloseDuration));
 									else
 										Mcells[b].place_end_time = tspf;
 									Mcells[b].place_trig = 0;
 									Mcells[b].placeclose = 2;
-									for (j2 = 0; j2 < P.PlaceTypeNum; j2++)
-										if (j2 != P.HotelPlaceType)
+									for (j2 = 0; j2 < g_allParams.PlaceTypeNum; j2++)
+										if (j2 != g_allParams.HotelPlaceType)
 											for (i2 = 0; i2 < Mcells[b].np[j2]; i2++)
 												DoPlaceClose(j2, Mcells[b].places[j2][i2], ts, tn, 1);
 								}
@@ -1550,7 +1550,7 @@ int TreatSweep(double t)
 					if ((Mcells[b].moverest == 2) && (ts >= Mcells[b].move_end_time))
 					{
 						f = 1;
-						Mcells[b].moverest = P.DoMoveRestrOnceOnly;
+						Mcells[b].moverest = g_allParams.DoMoveRestrOnceOnly;
 					}
 					if ((Mcells[b].moverest == 1) && (ts >= Mcells[b].move_start_time))
 					{
@@ -1559,36 +1559,36 @@ int TreatSweep(double t)
 						Mcells[b].move_trig = 0;
 						Mcells[b].move_end_time = tsmf;
 					}
-					if (P.DoGlobalTriggers)
-						f2 = (global_trig >= P.MoveRestrCellIncThresh);
-					else if (P.DoAdminTriggers)
+					if (g_allParams.DoGlobalTriggers)
+						f2 = (global_trig >= g_allParams.MoveRestrCellIncThresh);
+					else if (g_allParams.DoAdminTriggers)
 					{
-						trig_thresh = (P.DoPerCapitaTriggers) ? ((int)ceil(((double)(AdUnits[adi].n * P.MoveRestrCellIncThresh)) / P.IncThreshPop)) : P.MoveRestrCellIncThresh;
+						trig_thresh = (g_allParams.DoPerCapitaTriggers) ? ((int)ceil(((double)(AdUnits[adi].n * g_allParams.MoveRestrCellIncThresh)) / g_allParams.IncThreshPop)) : g_allParams.MoveRestrCellIncThresh;
 						f2 = (State.trigDC_adunit[adi] > trig_thresh);
 					}
 					else
 					{
-						trig_thresh = (P.DoPerCapitaTriggers) ? ((int)ceil(((double)(Mcells[b].n * P.MoveRestrCellIncThresh)) / P.IncThreshPop)) : P.MoveRestrCellIncThresh;
+						trig_thresh = (g_allParams.DoPerCapitaTriggers) ? ((int)ceil(((double)(Mcells[b].n * g_allParams.MoveRestrCellIncThresh)) / g_allParams.IncThreshPop)) : g_allParams.MoveRestrCellIncThresh;
 						f2 = (Mcells[b].treat_trig >= trig_thresh);
 					}
 
-					if ((t >= P.MoveRestrTimeStart) && (Mcells[b].moverest == 0) && (f2))
+					if ((t >= g_allParams.MoveRestrTimeStart) && (Mcells[b].moverest == 0) && (f2))
 					{
-						minx = (b / P.nmch); miny = (b % P.nmch);
+						minx = (b / g_allParams.nmch); miny = (b % g_allParams.nmch);
 						k = b;
 						i = j = m = f2 = 0;
 						l = f3 = 1;
-						if ((!P.MoveRestrByAdminUnit) || (ad > 0))
+						if ((!g_allParams.MoveRestrByAdminUnit) || (ad > 0))
 						{
-							ad2 = ad / P.MoveRestrAdminUnitDivisor;
+							ad2 = ad / g_allParams.MoveRestrAdminUnitDivisor;
 							do
 							{
-								if ((minx >= 0) && (minx < P.nmcw) && (miny >= 0) && (miny < P.nmch))
+								if ((minx >= 0) && (minx < g_allParams.nmcw) && (miny >= 0) && (miny < g_allParams.nmch))
 								{
-									if (P.MoveRestrByAdminUnit)
-										f4 = (AdUnits[Mcells[k].adunit].id / P.MoveRestrAdminUnitDivisor == ad2);
+									if (g_allParams.MoveRestrByAdminUnit)
+										f4 = (AdUnits[Mcells[k].adunit].id / g_allParams.MoveRestrAdminUnitDivisor == ad2);
 									else
-										f4 = ((r = dist2_mm(Mcells + b, Mcells + k)) < P.MoveRestrRadius2);
+										f4 = ((r = dist2_mm(Mcells + b, Mcells + k)) < g_allParams.MoveRestrRadius2);
 									if (f4)
 									{
 										f = f2 = 1;
@@ -1615,7 +1615,7 @@ int TreatSweep(double t)
 									if (i == 0) l++;
 									if (j == 1) { f3 = f2; f2 = 0; }
 								}
-								k = ((minx + P.nmcw) % P.nmcw) * P.nmch + (miny + P.nmch) % P.nmch;
+								k = ((minx + g_allParams.nmcw) % g_allParams.nmcw) * g_allParams.nmch + (miny + g_allParams.nmch) % g_allParams.nmch;
 							} while (f3);
 						}
 					}
@@ -1625,45 +1625,45 @@ int TreatSweep(double t)
 					//// **** //// **** //// **** //// **** //// **** //// **** //// **** //// ****
 
 
-					if (P.DoGlobalTriggers)
-						f2 = (global_trig < P.SocDistCellIncStopThresh);
-					else if (P.DoAdminTriggers)
+					if (g_allParams.DoGlobalTriggers)
+						f2 = (global_trig < g_allParams.SocDistCellIncStopThresh);
+					else if (g_allParams.DoAdminTriggers)
 					{
-						trig_thresh = (P.DoPerCapitaTriggers) ? ((int)ceil(((double)(AdUnits[adi].n * P.SocDistCellIncStopThresh)) / P.IncThreshPop)) : P.SocDistCellIncStopThresh;
+						trig_thresh = (g_allParams.DoPerCapitaTriggers) ? ((int)ceil(((double)(AdUnits[adi].n * g_allParams.SocDistCellIncStopThresh)) / g_allParams.IncThreshPop)) : g_allParams.SocDistCellIncStopThresh;
 						f2 = (State.trigDC_adunit[adi] < trig_thresh);
 					}
 					else
 					{
-						trig_thresh = (P.DoPerCapitaTriggers) ? ((int)ceil(((double)(Mcells[b].n * P.SocDistCellIncStopThresh)) / P.IncThreshPop)) : P.SocDistCellIncStopThresh;
+						trig_thresh = (g_allParams.DoPerCapitaTriggers) ? ((int)ceil(((double)(Mcells[b].n * g_allParams.SocDistCellIncStopThresh)) / g_allParams.IncThreshPop)) : g_allParams.SocDistCellIncStopThresh;
 						f2 = (Mcells[b].treat_trig < trig_thresh);
 					}
 
 					//// if: policy of social distancing has started AND this microcell cell has been labelled to as undergoing social distancing, AND either trigger not reached (note definition of f2 changes in next few lines) or end time has passed.
-					if ((t >= P.SocDistTimeStart) && (Mcells[b].socdist == 2) && ((f2) || (ts >= Mcells[b].socdist_end_time)))
+					if ((t >= g_allParams.SocDistTimeStart) && (Mcells[b].socdist == 2) && ((f2) || (ts >= Mcells[b].socdist_end_time)))
 					{
 						f = 1;
-						Mcells[b].socdist = P.DoSocDistOnceOnly; //// i.e. if P.DoSocDistOnceOnly set to false, socdist set to 0 here, hence will be picked up upon some subsequent call to TreatSweep if required trigger passes threshold.
+						Mcells[b].socdist = g_allParams.DoSocDistOnceOnly; //// i.e. if P.DoSocDistOnceOnly set to false, socdist set to 0 here, hence will be picked up upon some subsequent call to TreatSweep if required trigger passes threshold.
 						Mcells[b].socdist_trig = 0;	//// reset trigger
 						Mcells[b].socdist_end_time = ts; //// record end time.
 					}
-					if (P.DoGlobalTriggers)
-						f2 = (global_trig >= P.SocDistCellIncThresh);
-					else if (P.DoAdminTriggers)
+					if (g_allParams.DoGlobalTriggers)
+						f2 = (global_trig >= g_allParams.SocDistCellIncThresh);
+					else if (g_allParams.DoAdminTriggers)
 					{
-						trig_thresh = (P.DoPerCapitaTriggers) ? ((int)ceil(((double)(AdUnits[adi].n * P.SocDistCellIncThresh)) / P.IncThreshPop)) : P.SocDistCellIncThresh;
+						trig_thresh = (g_allParams.DoPerCapitaTriggers) ? ((int)ceil(((double)(AdUnits[adi].n * g_allParams.SocDistCellIncThresh)) / g_allParams.IncThreshPop)) : g_allParams.SocDistCellIncThresh;
 						f2 = (State.trigDC_adunit[adi] >= trig_thresh);
 					}
 					else
 					{
-						trig_thresh = (P.DoPerCapitaTriggers) ? ((int)ceil(((double)(Mcells[b].n * P.SocDistCellIncThresh)) / P.IncThreshPop)) : P.SocDistCellIncThresh;
+						trig_thresh = (g_allParams.DoPerCapitaTriggers) ? ((int)ceil(((double)(Mcells[b].n * g_allParams.SocDistCellIncThresh)) / g_allParams.IncThreshPop)) : g_allParams.SocDistCellIncThresh;
 						f2 = (Mcells[b].treat_trig >= trig_thresh);
 					}
-					if ((t >= P.SocDistTimeStart) && (Mcells[b].socdist == 0) && (f2))
+					if ((t >= g_allParams.SocDistTimeStart) && (Mcells[b].socdist == 0) && (f2))
 					{
 						//some code to try and deal with intervention delays and durations by admin unit based on global triggers
 						interventionFlag = 1;
 
-						if (P.DoInterventionDelaysByAdUnit)
+						if (g_allParams.DoInterventionDelaysByAdUnit)
 							if ((t <= AdUnits[Mcells[b].adunit].SocialDistanceTimeStart) ||
 								(t >= (AdUnits[Mcells[b].adunit].SocialDistanceTimeStart + AdUnits[Mcells[b].adunit].SocialDistanceDuration))) //// i.e. if outside window of social distancing for this admin unit.
 								interventionFlag = 0;
@@ -1674,8 +1674,8 @@ int TreatSweep(double t)
 								Mcells[b].socdist = 2; //// update flag to denote that cell is undergoing social distancing
 								Mcells[b].socdist_trig = 0; /// reset trigger
 								//// set (admin-specific) social distancing end time.
-								if (P.DoInterventionDelaysByAdUnit)
-									Mcells[b].socdist_end_time = (unsigned short int) ceil(P.TimeStepsPerDay * (t + AdUnits[Mcells[b].adunit].SocialDistanceDuration));
+								if (g_allParams.DoInterventionDelaysByAdUnit)
+									Mcells[b].socdist_end_time = (unsigned short int) ceil(g_allParams.TimeStepsPerDay * (t + AdUnits[Mcells[b].adunit].SocialDistanceDuration));
 								else
 									Mcells[b].socdist_end_time = tssdf;
 							}
@@ -1689,30 +1689,30 @@ int TreatSweep(double t)
 					if ((Mcells[b].keyworkerproph == 2) && (ts >= Mcells[b].keyworkerproph_end_time))
 					{
 						f = 1;
-						Mcells[b].keyworkerproph = P.DoKeyWorkerProphOnceOnly;
+						Mcells[b].keyworkerproph = g_allParams.DoKeyWorkerProphOnceOnly;
 					}
-					if (P.DoGlobalTriggers)
-						f2 = (global_trig >= P.KeyWorkerProphCellIncThresh);
-					else if (P.DoAdminTriggers)
+					if (g_allParams.DoGlobalTriggers)
+						f2 = (global_trig >= g_allParams.KeyWorkerProphCellIncThresh);
+					else if (g_allParams.DoAdminTriggers)
 					{
-						trig_thresh = (P.DoPerCapitaTriggers) ? ((int)ceil(((double)(AdUnits[adi].n * P.KeyWorkerProphCellIncThresh)) / P.IncThreshPop)) : P.KeyWorkerProphCellIncThresh;
+						trig_thresh = (g_allParams.DoPerCapitaTriggers) ? ((int)ceil(((double)(AdUnits[adi].n * g_allParams.KeyWorkerProphCellIncThresh)) / g_allParams.IncThreshPop)) : g_allParams.KeyWorkerProphCellIncThresh;
 						f2 = (State.trigDC_adunit[adi] > trig_thresh);
 					}
 					else
 					{
-						trig_thresh = (P.DoPerCapitaTriggers) ? ((int)ceil(((double)(Mcells[b].n * P.KeyWorkerProphCellIncThresh)) / P.IncThreshPop)) : P.KeyWorkerProphCellIncThresh;
+						trig_thresh = (g_allParams.DoPerCapitaTriggers) ? ((int)ceil(((double)(Mcells[b].n * g_allParams.KeyWorkerProphCellIncThresh)) / g_allParams.IncThreshPop)) : g_allParams.KeyWorkerProphCellIncThresh;
 						f2 = (Mcells[b].treat_trig >= trig_thresh);
 					}
-					if ((P.DoPlaces) && (t >= P.KeyWorkerProphTimeStart) && (Mcells[b].keyworkerproph == 0) && (f2))
+					if ((g_allParams.DoPlaces) && (t >= g_allParams.KeyWorkerProphTimeStart) && (Mcells[b].keyworkerproph == 0) && (f2))
 					{
-						minx = (b / P.nmch); miny = (b % P.nmch);
+						minx = (b / g_allParams.nmch); miny = (b % g_allParams.nmch);
 						k = b;
 						i = j = m = f2 = 0;
 						l = f3 = 1;
 						do
 						{
-							if ((minx >= 0) && (minx < P.nmcw) && (miny >= 0) && (miny < P.nmch))
-								if (dist2_mm(Mcells + b, Mcells + k) < P.KeyWorkerProphRadius2)
+							if ((minx >= 0) && (minx < g_allParams.nmcw) && (miny >= 0) && (miny < g_allParams.nmch))
+								if (dist2_mm(Mcells + b, Mcells + k) < g_allParams.KeyWorkerProphRadius2)
 								{
 									f = f2 = 1;
 									if ((Mcells[k].n > 0) && (Mcells[k].keyworkerproph == 0))
@@ -1744,12 +1744,12 @@ int TreatSweep(double t)
 								if (i == 0) l++;
 								if (j == 1) { f3 = f2; f2 = 0; }
 							}
-							k = ((minx + P.nmcw) % P.nmcw) * P.nmch + (miny + P.nmch) % P.nmch;
+							k = ((minx + g_allParams.nmcw) % g_allParams.nmcw) * g_allParams.nmch + (miny + g_allParams.nmch) % g_allParams.nmch;
 						} while (f3);
 					}
 
 			}
-		for (i = 0; i < P.NumThreads; i++)
+		for (i = 0; i < g_allParams.NumThreads; i++)
 		{
 			State.cumT += StateT[i].cumT;
 			State.cumTP += StateT[i].cumTP;

@@ -13,28 +13,56 @@
 typedef struct PARAM {
 
 
-	int N; /**< Population size */
-	int NH; // Number of households
-	int NR; /**< Number of Realisations */
-	int NRN; /**< Number of non-extinct realisations */
+	int populationSize; /**< Population size */
+	int housholdCount; // Number of households
+	int realisationNumber; /**< Number of Realisations */
+	int nonextinctRealisationNumber; /**< Number of non-extinct realisations */
 	int NRactual;
 	int NRactE;
 	int NRactNE;
 	int UpdatesPerSample; // Number of time steps between samples
-	int NumSamples; // Total number of samples that will be made
+	int totalSampleNumber; // Total number of samples that will be made
+
 	int KernelType;
-	int NKR; // Size of kernel lookup table
-	int NK_HR; // Factor to expand hi-res kernel lookup table by
-	int MoveKernelType;
-	int AirportKernelType;
-	unsigned int BinFileLen;
-	int DoBin, DoSaveSnapshot, DoLoadSnapshot;
-	double SnapshotSaveTime, SnapshotLoadTime, clP1, clP2, clP3, clP4, clP5, clP6;
-	int NC; // Number of cells
-	int NMC; // Number of microcells
-	int NMCL; // Number of microcells wide/high a cell is; i.e. NMC = NC * NMCL * NMCL
-	int NCP; /**< Number of populated cells  */
-	int NMCP, ncw, nch, nmcw, nmch, DoUTM_coords, nsp, DoSeasonality, DoCorrectAgeDist, DoPartialImmunity;
+	int kernelLookupTableSize; // Size of kernel lookup table
+	int hiResKernelExpansionFactor; // Factor to expand hi-res kernel lookup table by
+
+	// TODO: Make these into enums
+	int moveKernelType;
+	int airportKernelType;
+
+	unsigned int binFileLen;
+	int DoBin;
+	int DoSaveSnapshot;
+	int DoLoadSnapshot;
+	double SnapshotSaveTime;
+	double SnapshotLoadTime;
+
+	// TODO: Put these into a struct of their own. Also, give them sane names.
+	double clP1;
+	double clP2;
+	double clP3;
+	double clP4;
+	double clP5;
+	double clP6;
+
+	int cellCount; // Number of cells
+	int microcellCount; // Number of microcells
+	int microcellsOnACellSide; // Number of microcells wide/high a cell is; i.e. NMC = NC * NMCL * NMCL
+	int populatedCellCount; /**< Number of populated cells  */
+
+	// TODO: Who knows what these should be called?!
+	int NMCP;
+	int ncw;
+	int nch;
+	int nmcw;
+	int nmch;
+	int DoUTM_coords;
+	int nsp;
+	int DoSeasonality;
+	int DoCorrectAgeDist;
+	int DoPartialImmunity;
+
 	int DoAdUnits, NumAdunits, DoAdunitBoundaries, AdunitLevel1Divisor, AdunitLevel1Mask, AdunitBitmapDivisor, CountryDivisor;
 	int DoAdunitOutput, DoAdunitBoundaryOutput, DoAdunitDemog, DoCorrectAdunitPop, DoSpecifyPop, AdunitLevel1Lookup[ADUNIT_LOOKUP_SIZE];
 	int DoOutputPlaceDistForOneAdunit, OutputPlaceDistAdunit, OutputDensFile;
@@ -278,6 +306,6 @@ typedef struct PARAM {
 	int OlderGenGap;
 } param;
 
-extern param P;
+extern param g_allParams;
 
 #endif // COVIDSIM_PARAM_H_INCLUDED_
